@@ -3,13 +3,14 @@ export interface Node {
   hunkId: string;
   file: string;
   textualRepresentation: string;
-  description: string;
+  description?: string;
+  title?: string;
   startLine: number;
   startChar: number;
   endLine: number;
   endChar: number;
   nodeType: "BASE" | "CONTEXT" | "AGGREGATOR" | "EXTENSION";
-  aggregatorId?: string;
+  aggregatorIds?: string[];
 }
 
 export interface Edge {

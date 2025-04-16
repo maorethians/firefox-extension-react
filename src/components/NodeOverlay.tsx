@@ -2,19 +2,18 @@ import React from "react";
 import { Commit, Node } from "@/types";
 import { isHunkValid } from "@/services/content/isHunkValid.ts";
 import { colors } from "@/public/colors.ts";
-import { CytoscapeGraph } from "@/components/Graph.tsx";
+import { Navigator } from "@/components/Navigator.tsx";
 
 export const NodeOverlay: React.FC<{
   commit: Commit;
-  nodes: Node[];
-  excludeSubject?: boolean;
+  hunk: Node[];
   style?: React.CSSProperties;
-}> = ({ commit, nodes, excludeSubject, style }) => {
-  if (nodes.length === 0) {
+}> = ({ commit, hunk, style }) => {
+  if (hunk.length === 0) {
     return;
   }
 
-  if (!isHunkValid(nodes)) {
+  if (!isHunkValid(hunk)) {
     return;
   }
 
@@ -28,14 +27,7 @@ export const NodeOverlay: React.FC<{
         ...(style ?? {}),
       }}
     >
-      {nodes.map((node, index) => (
-        <CytoscapeGraph
-          key={index}
-          commit={commit}
-          excludeSubject={excludeSubject}
-          subjectNode={node}
-        />
-      ))}
+      <Navigator hunk={hunk} commit={commit} />
     </div>
   );
 };

@@ -1,6 +1,5 @@
 import { Commit, Node } from "@/types";
-import { groupBy } from "lodash";
-import { SUBJECT_MESSAGE_TYPE } from "@/components/SubjectNode.tsx";
+import { intersection, uniq } from "lodash";
 import ReactDOM from "react-dom/client";
 import React from "react";
 import { HunkLineWrapper } from "@/components/HunkLineWrapper.tsx";
@@ -22,26 +21,43 @@ export class HunkLinesHandler {
   }
 
   async init() {
-    const filesContainer = document
-      .getElementsByClassName("js-diff-progressive-container")
-      .item(0);
-    if (!filesContainer) {
+    const portalHook = document.getElementById("commit-details-marker-portal");
+    if (!portalHook) {
       return;
     }
-    for (const diffEntry of filesContainer.children) {
-      const diffDiv = diffEntry.children.item(0);
-      if (!diffDiv) {
+
+    const filesDiffParent = portalHook.nextElementSibling;
+    if (!filesDiffParent) {
+      return;
+    }
+
+    for (const fileDiff of filesDiffParent.children) {
+      const filePathSection = fileDiff.children.item(0)?.firstElementChild;
+      if (!filePathSection) {
         continue;
       }
-
-      const fileContent = diffDiv.children.item(1);
-      const diffTable = fileContent?.querySelectorAll("table").item(0);
-      if (!diffTable) {
+      const filePathButton = filePathSection.querySelector("button");
+      const filePathWrapper = filePathButton?.nextElementSibling;
+      const filePathElement =
+        filePathWrapper?.firstElementChild?.firstElementChild
+          ?.nextElementSibling?.firstElementChild;
+      if (!filePathElement) {
         continue;
       }
-
-      const filePath = diffEntry.getAttribute("data-file-path");
+      const filePath = filePathElement.innerHTML?.replace(
+        /[\u200E\u200F\u202A-\u202E\uFEFF]/g,
+        "",
+      );
       if (!filePath) {
+        continue;
+      }
+
+      const diffSection = fileDiff.children.item(1);
+      if (!diffSection) {
+        continue;
+      }
+      const diffTable = diffSection.querySelectorAll("table").item(0);
+      if (!diffTable) {
         continue;
       }
 
@@ -84,8 +100,9 @@ export class HunkLinesHandler {
 
   private async injectLines(subjectNode: Node) {
     const descendantLeaves = this.getDescendantLeaves(subjectNode);
-    const hunks = Object.values(
-      groupBy(descendantLeaves, (node) => node.hunkId),
+    const hunkIds = uniq(descendantLeaves.map((leaf) => leaf.hunkId));
+    const hunks = hunkIds.map((hunkId) =>
+      this.commit.nodes.filter((node) => node.hunkId === hunkId),
     );
 
     for (const hunk of hunks) {
@@ -110,6 +127,7 @@ export class HunkLinesHandler {
         }
 
         if (
+          rowInfo.rightLineNumber &&
           startLine <= rowInfo.rightLineNumber &&
           rowInfo.rightLineNumber <= endLine
         ) {
@@ -158,7 +176,9 @@ export class HunkLinesHandler {
     let hopNodeIds = [subjectNode.id];
     while (true) {
       const hopChildren = this.commit.nodes.filter(
-        (node) => node.aggregatorId && hopNodeIds.includes(node.aggregatorId),
+        (node) =>
+          node.aggregatorIds &&
+          intersection(hopNodeIds, node.aggregatorIds).length > 0,
       );
 
       if (hopChildren.length == 0) {
@@ -179,23 +199,22 @@ export class HunkLinesHandler {
       return;
     }
 
-    if (row.nodeName !== "TR") {
-      return;
-    }
+    // if (row.nodeName !== "TR") {
+    //   return;
+    // }
 
-    const right = row.querySelectorAll('td[data-split-side="right"]').item(0);
+    const right = row.lastElementChild;
     if (!right) {
       return;
     }
 
     const rightLine =
-      right.previousElementSibling?.getAttribute("data-line-number");
+      right.previousElementSibling?.firstElementChild?.innerHTML;
     if (!rightLine) {
-      return;
+      return { right };
     }
-    const rightLineNumber = parseInt(rightLine, 10);
 
-    return { right, rightLineNumber };
+    return { right, rightLineNumber: parseInt(rightLine, 10) };
   }
 
   private async expandRow(row: Element, direction: Direction) {
@@ -249,7 +268,7 @@ export class HunkLinesHandler {
     let closestDistance = rows.length;
     for (const row of rows) {
       const rowInfo = this.getRowInfo(row);
-      if (!rowInfo) {
+      if (!rowInfo || !rowInfo.rightLineNumber) {
         continue;
       }
 

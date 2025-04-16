@@ -2,13 +2,16 @@ import React, { RefObject } from "react";
 import { Commit } from "@/types";
 import { NodeOverlay } from "@/components/NodeOverlay.tsx";
 import { colors } from "@/public/colors.ts";
+import { keyBy } from "lodash";
 
 export const SUBJECT_MESSAGE_TYPE = "SetSubjectNode";
 
 export const SubjectNode: React.FC<{
   commit: Commit;
 }> = ({ commit }) => {
-  const commitNode = commit.nodes.find((node) => node.id === "commit");
+  const nodesDictionary = keyBy(commit.nodes, "id");
+
+  const commitNode = nodesDictionary["commit"];
   if (!commitNode) {
     return;
   }
@@ -21,9 +24,7 @@ export const SubjectNode: React.FC<{
     }
 
     const { subjectId } = data.data;
-    const requestedSubjectNode = commit.nodes.find(
-      (node) => node.id === subjectId,
-    );
+    const requestedSubjectNode = nodesDictionary[subjectId];
     if (!requestedSubjectNode) {
       return;
     }
@@ -36,7 +37,6 @@ export const SubjectNode: React.FC<{
   const [isTextualRepresentationExpanded, setTextualRepresentationExpanded] =
     useState(false);
   const [isDescriptionExpanded, setDescriptionExpanded] = useState(false);
-  const [isGraphExpanded, setGraphExpanded] = useState(false);
 
   const ref: RefObject<HTMLDivElement | null> = useRef(null);
   return (
@@ -52,11 +52,11 @@ export const SubjectNode: React.FC<{
       {isHovered && (
         <NodeOverlay
           commit={commit}
-          nodes={[subjectNode]}
+          hunk={[subjectNode]}
           style={{ left: 0, top: "100%" }}
         />
       )}
-      <h3>{subjectNode.id}</h3>
+      <h3>{subjectNode.title ?? subjectNode.id}</h3>
       {subjectNode.textualRepresentation && (
         <div>
           <h4>Textual Representation:</h4>
@@ -81,7 +81,11 @@ export const SubjectNode: React.FC<{
           >
             Expand
           </button>
-          {isDescriptionExpanded && <pre>{subjectNode.description}</pre>}
+          {isDescriptionExpanded && (
+            <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word" }}>
+              {subjectNode.description}
+            </pre>
+          )}
         </div>
       ) : (
         <button>Generate</button>

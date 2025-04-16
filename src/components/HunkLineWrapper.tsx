@@ -38,8 +38,7 @@ export const HunkLineWrapper: React.FC<{
       {isHovered && (
         <NodeOverlay
           commit={commit}
-          nodes={hunk}
-          excludeSubject={true}
+          hunk={hunk}
           style={{ top: 0, right: "100%" }}
         />
       )}

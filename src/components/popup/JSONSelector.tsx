@@ -1,8 +1,7 @@
 import React, { ChangeEvent } from "react";
 import { storage } from "wxt/storage";
 import { Commit } from "@/types";
-
-export const COMMIT_STORAGE_KEY = "local:commit";
+import { getStorageKey } from "@/services/getStorageKey.ts";
 
 const getFilesContent = async (files: FileList): Promise<any[]> => {
   const filePromises = Array.from(files).map((file) => {
@@ -36,17 +35,16 @@ const handleFolderSelection = async (event: ChangeEvent<HTMLInputElement>) => {
   }
 
   const filesContent = await getFilesContent(files);
-  console.log(filesContent);
   const content = filesContent.find((content) => isCommit(content));
   if (!content) {
     return;
   }
 
-  await storage.setItem(COMMIT_STORAGE_KEY, content);
+  await storage.setItem(getStorageKey(content.url), content);
   await browser.tabs.create({ url: content.url + "?diff=split" });
 };
 
-export const DirectoryUploader = () => {
+export const JSONSelector = () => {
   const ref = React.useRef<HTMLInputElement>(null);
   React.useEffect(() => {}, [ref]);
 

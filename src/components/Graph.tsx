@@ -22,15 +22,18 @@ export const CytoscapeGraph = ({
   }
 
   const children = commit.nodes.filter(
-    (node) => node.aggregatorId && node.aggregatorId === subjectNode.id,
+    (node) => node.aggregatorIds && node.aggregatorIds.includes(subjectNode.id),
   );
   nodes.push(...children);
 
   const commitNodesDictionary = keyBy(commit.nodes, "id");
-  const parent =
-    subjectNode.aggregatorId && commitNodesDictionary[subjectNode.aggregatorId];
-  if (parent) {
-    nodes.push(parent);
+  const parents =
+    subjectNode.aggregatorIds &&
+    subjectNode.aggregatorIds.map(
+      (aggregatorId) => commitNodesDictionary[aggregatorId],
+    );
+  if (parents) {
+    nodes.push(...parents);
   }
 
   const cyRef: RefObject<cytoscape.Core | null> = useRef(null);
@@ -76,7 +79,7 @@ export const CytoscapeGraph = ({
         content: node.id,
         backgroundColor: nodeColor,
         isAggregator: node.nodeType === "AGGREGATOR",
-        aggregatorId: node.aggregatorId,
+        aggregatorIds: node.aggregatorIds,
       },
     });
     graphNodes.push({
@@ -86,7 +89,7 @@ export const CytoscapeGraph = ({
         parent: `${node.id}-parent`,
         backgroundColor: nodeColor,
         isAggregator: node.nodeType === "AGGREGATOR",
-        aggregatorId: node.aggregatorId,
+        aggregatorIds: node.aggregatorIds,
       },
     });
   });

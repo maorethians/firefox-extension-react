@@ -1,11 +1,11 @@
 import "./App.css";
-import { DirectoryUploader } from "@/components/UploadDirectory.tsx";
+import { JSONSelector } from "@/components/popup/JSONSelector.tsx";
 
 function App() {
   return (
     <>
       <div>
-        <DirectoryUploader />
+        <JSONSelector />
       </div>
     </>
   );
