@@ -1,5 +1,8 @@
+import { createTheme } from "@mui/material";
+
 export const colors = {
-  APP: "#1A1730",
+  PRIMARY: "#1A1730",
+  SECONDARY: "#90caf9",
   HUNK: {
     BASE: "#1f4972",
     AGGREGATOR: "#2C2C2C",
@@ -15,3 +18,14 @@ export const colors = {
     EXPANSION: "#F4D03F",
   },
 };
+
+export const theme = createTheme({
+  palette: {
+    primary: {
+      main: colors.PRIMARY, // Your custom secondary color
+    },
+    secondary: {
+      main: colors.SECONDARY, // Your custom secondary color
+    },
+  },
+});

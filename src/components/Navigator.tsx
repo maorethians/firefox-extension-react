@@ -2,6 +2,7 @@ import React from "react";
 import { Commit, Node } from "@/types";
 import { intersection, uniq } from "lodash";
 import { SUBJECT_MESSAGE_TYPE } from "@/components/SubjectNode.tsx";
+import { Button } from "@mui/material";
 
 export const Navigator: React.FC<{
   hunk: Node[];
@@ -24,7 +25,8 @@ export const Navigator: React.FC<{
           <h3>Parents:</h3>
           <div style={{ display: "flex", flexDirection: "column" }}>
             {parents.map((parent) => (
-              <button
+              <Button
+                variant="contained"
                 onClick={() => {
                   window.postMessage({
                     type: SUBJECT_MESSAGE_TYPE,
@@ -33,7 +35,7 @@ export const Navigator: React.FC<{
                 }}
               >
                 {parent.title ?? parent.id}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -43,7 +45,8 @@ export const Navigator: React.FC<{
           <h3>Explore:</h3>
           <div style={{ display: "flex", flexDirection: "column" }}>
             {children.map((child) => (
-              <button
+              <Button
+                variant="contained"
                 onClick={() => {
                   window.postMessage({
                     type: SUBJECT_MESSAGE_TYPE,
@@ -52,7 +55,7 @@ export const Navigator: React.FC<{
                 }}
               >
                 {child.title ?? child.id}
-              </button>
+              </Button>
             ))}
           </div>
         </div>

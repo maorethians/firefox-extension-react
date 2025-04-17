@@ -2,6 +2,7 @@ import React, { ChangeEvent } from "react";
 import { storage } from "wxt/storage";
 import { Commit } from "@/types";
 import { getStorageKey } from "@/services/getStorageKey.ts";
+import { Button } from "@mui/material";
 
 const getFilesContent = async (files: FileList): Promise<any[]> => {
   const filePromises = Array.from(files).map((file) => {
@@ -45,20 +46,21 @@ const handleFolderSelection = async (event: ChangeEvent<HTMLInputElement>) => {
 };
 
 export const JSONSelector = () => {
-  const ref = React.useRef<HTMLInputElement>(null);
-  React.useEffect(() => {}, [ref]);
-
   return (
     <div>
-      <div>
+      <Button
+        component="label"
+        role={undefined}
+        variant="contained"
+        tabIndex={-1}
+      >
+        Upload File
         <input
           type="file"
-          ref={ref}
           style={{ display: "none" }}
           onChange={handleFolderSelection}
         />
-        <button onClick={() => ref.current?.click()}>Upload File</button>
-      </div>
+      </Button>
     </div>
   );
 };

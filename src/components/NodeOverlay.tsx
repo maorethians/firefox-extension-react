@@ -21,7 +21,7 @@ export const NodeOverlay: React.FC<{
     <div
       style={{
         position: "absolute",
-        backgroundColor: colors.APP,
+        backgroundColor: colors.PRIMARY,
         zIndex: 9999,
         whiteSpace: "nowrap",
         ...(style ?? {}),

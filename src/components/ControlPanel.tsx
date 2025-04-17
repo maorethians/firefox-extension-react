@@ -2,6 +2,7 @@ import React from "react";
 import { colors } from "@/public/colors.ts";
 import { Commit } from "@/types";
 import { Narrator } from "@/services/content/Narrator.ts";
+import { Button } from "@mui/material";
 
 export const ControlPanel: React.FC<{ commit: Commit }> = ({ commit }) => {
   const narrator = new Narrator(commit);
@@ -9,7 +10,7 @@ export const ControlPanel: React.FC<{ commit: Commit }> = ({ commit }) => {
   return (
     <div
       style={{
-        backgroundColor: colors.APP,
+        backgroundColor: colors.PRIMARY,
       }}
     >
       <h2
@@ -20,9 +21,15 @@ export const ControlPanel: React.FC<{ commit: Commit }> = ({ commit }) => {
       >
         Change Narrator
       </h2>
-      <button onClick={narrator.beginStory}>Narrate</button>
-      <button onClick={() => narrator.previousChapter()}>Previous</button>
-      <button onClick={() => narrator.nextChapter()}>Next</button>
+      <Button variant="contained" onClick={narrator.beginStory}>
+        Narrate
+      </Button>
+      <Button variant="contained" onClick={() => narrator.previousChapter()}>
+        Previous
+      </Button>
+      <Button variant="contained" onClick={() => narrator.nextChapter()}>
+        Next
+      </Button>
     </div>
   );
 };

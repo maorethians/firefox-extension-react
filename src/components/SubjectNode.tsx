@@ -3,6 +3,7 @@ import { Commit } from "@/types";
 import { NodeOverlay } from "@/components/NodeOverlay.tsx";
 import { colors } from "@/public/colors.ts";
 import { keyBy } from "lodash";
+import { Button } from "@mui/material";
 
 export const SUBJECT_MESSAGE_TYPE = "SetSubjectNode";
 
@@ -43,7 +44,7 @@ export const SubjectNode: React.FC<{
     <div
       ref={ref}
       style={{
-        backgroundColor: colors.APP,
+        backgroundColor: colors.PRIMARY,
         position: "relative",
       }}
       onMouseEnter={() => setIsHovered(true)}
@@ -60,13 +61,14 @@ export const SubjectNode: React.FC<{
       {subjectNode.textualRepresentation && (
         <div>
           <h4>Textual Representation:</h4>
-          <button
+          <Button
+            variant="contained"
             onClick={() =>
               setTextualRepresentationExpanded(!isTextualRepresentationExpanded)
             }
           >
             Expand
-          </button>
+          </Button>
           {isTextualRepresentationExpanded && (
             <pre>{subjectNode.textualRepresentation}</pre>
           )}
@@ -76,11 +78,12 @@ export const SubjectNode: React.FC<{
       <h4>Description:</h4>
       {subjectNode.description ? (
         <div>
-          <button
+          <Button
+            variant="contained"
             onClick={() => setDescriptionExpanded(!isDescriptionExpanded)}
           >
             Expand
-          </button>
+          </Button>
           {isDescriptionExpanded && (
             <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word" }}>
               {subjectNode.description}
@@ -88,7 +91,7 @@ export const SubjectNode: React.FC<{
           )}
         </div>
       ) : (
-        <button>Generate</button>
+        <Button variant="contained">Generate</Button>
       )}
     </div>
   );

@@ -15,12 +15,18 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@langchain/core": "^0.3.44",
+    "@langchain/groq": "^0.2.2",
+    "@mui/material": "^7.0.2",
     "@types/bluebird": "^3.5.42",
     "@types/cytoscape": "^3.21.9",
     "@types/lodash": "^4.17.15",
     "@types/react-cytoscapejs": "^1.2.5",
     "bluebird": "^3.7.2",
     "cytoscape": "^3.31.0",
+    "langchain": "^0.3.21",
     "lodash": "^4.17.21",
     "react": "^19.0.0",
     "react-cytoscapejs": "^2.0.0",
