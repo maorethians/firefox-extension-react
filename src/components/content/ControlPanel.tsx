@@ -1,11 +1,13 @@
 import React from "react";
 import { colors } from "@/public/colors.ts";
-import { Commit } from "@/types";
 import { Narrator } from "@/services/content/Narrator.ts";
 import { Button } from "@mui/material";
+import { NodesStore } from "@/services/content/NodesStore.ts";
 
-export const ControlPanel: React.FC<{ commit: Commit }> = ({ commit }) => {
-  const narrator = new Narrator(commit);
+export const ControlPanel: React.FC<{ nodesStore: NodesStore }> = ({
+  nodesStore,
+}) => {
+  const narrator = new Narrator(nodesStore);
 
   return (
     <div
@@ -13,14 +15,6 @@ export const ControlPanel: React.FC<{ commit: Commit }> = ({ commit }) => {
         backgroundColor: colors.PRIMARY,
       }}
     >
-      <h2
-        style={{
-          display: "flex",
-          justifyContent: "center",
-        }}
-      >
-        Change Narrator
-      </h2>
       <Button variant="contained" onClick={narrator.beginStory}>
         Narrate
       </Button>

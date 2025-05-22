@@ -1,23 +1,27 @@
-import { Commit, Node } from "@/types";
-import { intersection, uniq } from "lodash";
+import { groupBy, intersection, uniq } from "lodash";
 import ReactDOM from "react-dom/client";
 import React from "react";
-import { HunkLineWrapper } from "@/components/HunkLineWrapper.tsx";
 import BPromise from "bluebird";
+import { SUBJECT_MESSAGE_TYPE } from "@/components/content/SubjectNode.tsx";
+import { HunkLineWrapper } from "@/components/content/HunkLineWrapper.tsx";
+import { NodesStore } from "@/services/content/NodesStore.ts";
+import { BaseNode } from "@/services/content/graph/BaseNode.ts";
+import { Hunk } from "@/services/content/graph/Hunk.ts";
+import { isHunk } from "@/types";
 
 type ClosenessType = "start" | "end";
 type Direction = "up" | "down";
 
 export class HunkLinesHandler {
-  private readonly commit: Commit;
+  private readonly nodesStore: NodesStore;
   private currentLines: {
     line: Element;
     placeholder: Element;
   }[] = [];
   private fileDiffTable: Record<string, HTMLTableSectionElement> = {};
 
-  constructor(commit: Commit) {
-    this.commit = commit;
+  constructor(nodesStore: NodesStore) {
+    this.nodesStore = nodesStore;
   }
 
   async init() {
@@ -26,12 +30,18 @@ export class HunkLinesHandler {
       return;
     }
 
-    const filesDiffParent = portalHook.nextElementSibling;
-    if (!filesDiffParent) {
-      return;
-    }
+    let filesDiffParent: Element | null = portalHook;
+    while (true) {
+      filesDiffParent = filesDiffParent.nextElementSibling;
+      if (!filesDiffParent) {
+        break;
+      }
 
-    for (const fileDiff of filesDiffParent.children) {
+      const fileDiff = filesDiffParent.children.item(0);
+      if (!fileDiff) {
+        continue;
+      }
+
       const filePathSection = fileDiff.children.item(0)?.firstElementChild;
       if (!filePathSection) {
         continue;
@@ -40,10 +50,11 @@ export class HunkLinesHandler {
       const filePathWrapper = filePathButton?.nextElementSibling;
       const filePathElement =
         filePathWrapper?.firstElementChild?.firstElementChild
-          ?.nextElementSibling?.firstElementChild;
+          ?.firstElementChild;
       if (!filePathElement) {
         continue;
       }
+
       const filePath = filePathElement.innerHTML?.replace(
         /[\u200E\u200F\u202A-\u202E\uFEFF]/g,
         "",
@@ -72,9 +83,7 @@ export class HunkLinesHandler {
       }
 
       const { subjectId } = data.data;
-      const requestedSubjectNode = this.commit.nodes.find(
-        (node) => node.id === subjectId,
-      );
+      const requestedSubjectNode = this.nodesStore.getNodeById(subjectId);
       if (!requestedSubjectNode) {
         return;
       }
@@ -83,7 +92,7 @@ export class HunkLinesHandler {
       await this.injectLines(requestedSubjectNode);
     });
 
-    const subjectNode = this.commit.nodes.find((node) => node.id === "commit");
+    const subjectNode = this.nodesStore.getNodeById("commit");
     if (!subjectNode) {
       return;
     }
@@ -98,18 +107,23 @@ export class HunkLinesHandler {
     this.currentLines = [];
   }
 
-  private async injectLines(subjectNode: Node) {
-    const descendantLeaves = this.getDescendantLeaves(subjectNode);
-    const hunkIds = uniq(descendantLeaves.map((leaf) => leaf.hunkId));
-    const hunks = hunkIds.map((hunkId) =>
-      this.commit.nodes.filter((node) => node.hunkId === hunkId),
+  private async injectLines(subjectNode: BaseNode) {
+    const descendantHunks = this.getDescendantHunks(subjectNode);
+    const hunkIds = uniq(descendantHunks.map(({ node }) => node.hunkId));
+    const hunks = this.nodesStore
+      .getNodes()
+      .filter(
+        ({ node }) => isHunk(node) && hunkIds.includes(node.hunkId),
+      ) as Hunk[];
+    const groupedHunks = Object.values(
+      groupBy(hunks, ({ node }) => node.hunkId),
     );
 
-    for (const hunk of hunks) {
-      const { startLine, endLine, file } = hunk[0];
+    for (const hunk of groupedHunks) {
+      const { startLine, endLine, path } = hunk[0].node;
 
       const { closestRow, closenessType } = this.getClosestRow(
-        Array.from(this.fileDiffTable[file].children),
+        Array.from(this.fileDiffTable[path].children),
         startLine,
         endLine,
       );
@@ -155,7 +169,7 @@ export class HunkLinesHandler {
 
       for (const line of lines) {
         const component = React.createElement(HunkLineWrapper, {
-          commit: this.commit,
+          nodesStore: this.nodesStore,
           hunk,
           element: line.cloneNode(true) as HTMLElement,
         });
@@ -170,28 +184,28 @@ export class HunkLinesHandler {
     }
   }
 
-  private getDescendantLeaves(subjectNode: Node): Node[] {
-    const descendantNodes: Node[] = [subjectNode];
+  private getDescendantHunks(subjectNode: BaseNode): Hunk[] {
+    const descendantNodes: BaseNode[] = [subjectNode];
 
-    let hopNodeIds = [subjectNode.id];
+    let hopNodeIds = [subjectNode.node.id];
     while (true) {
-      const hopChildren = this.commit.nodes.filter(
-        (node) =>
-          node.aggregatorIds &&
-          intersection(hopNodeIds, node.aggregatorIds).length > 0,
-      );
+      const hopChildren = this.nodesStore
+        .getNodes()
+        .filter(
+          ({ node }) => intersection(hopNodeIds, node.aggregatorIds).length > 0,
+        );
 
       if (hopChildren.length == 0) {
         break;
       }
 
-      hopNodeIds = hopChildren.map((node) => node.id);
+      hopNodeIds = hopChildren.map(({ node }) => node.id);
       descendantNodes.push(...hopChildren);
     }
 
     return descendantNodes.filter(
-      (node) => node.nodeType === "BASE" || node.nodeType === "EXTENSION",
-    );
+      ({ node }) => node.nodeType === "BASE" || node.nodeType === "EXTENSION",
+    ) as Hunk[];
   }
 
   private getRowInfo(row?: Element | null) {

@@ -4,6 +4,7 @@ import { addSubjectVisualization } from "@/services/content/addSubjectVisualizat
 import { HunkLinesHandler } from "@/services/content/HunkLinesHandler.ts";
 import { getStorageKey } from "@/services/getStorageKey.ts";
 import { addControlPanel } from "@/services/content/addControlPanel.ts";
+import { NodesStore } from "@/services/content/NodesStore.ts";
 
 export default defineContentScript({
   matches: [
@@ -20,10 +21,12 @@ export default defineContentScript({
       return;
     }
 
-    addControlPanel(commit);
-    addSubjectVisualization(commit);
+    const nodesStore = new NodesStore(commit);
 
-    const hunkLinesHandler = new HunkLinesHandler(commit);
+    addControlPanel(nodesStore);
+    addSubjectVisualization(nodesStore);
+
+    const hunkLinesHandler = new HunkLinesHandler(nodesStore);
     await hunkLinesHandler.init();
   },
 });

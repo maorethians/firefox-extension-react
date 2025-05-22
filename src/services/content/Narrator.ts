@@ -1,25 +1,26 @@
-import { Dictionary, keyBy, last } from "lodash";
-import { Commit, Edge, Node } from "@/types";
-import { SUBJECT_MESSAGE_TYPE } from "@/components/SubjectNode.tsx";
+import { last } from "lodash";
+import { SUBJECT_MESSAGE_TYPE } from "@/components/content/SubjectNode.tsx";
+import { NodesStore } from "@/services/content/NodesStore.ts";
+import { isAggregator } from "@/types";
 
 export class Narrator {
-  nodesDictionary: Dictionary<Node>;
-  narrate: string[];
+  nodesStore: NodesStore;
+  story: string[];
   current: string | null = null;
 
-  constructor(commit: Commit) {
-    this.nodesDictionary = keyBy(commit.nodes, "id");
+  constructor(nodesStore: NodesStore) {
+    this.nodesStore = nodesStore;
 
-    const commitNode = this.nodesDictionary["commit"];
+    const commitNode = this.nodesStore.getNodeById("commit");
     if (!commitNode) {
       throw new Error("Could not find commit node");
     }
 
     const visited: string[] = [],
-      stack = [commitNode.id];
-    this.dfs(commit.edges, visited, stack);
+      stack = [commitNode.node.id];
+    this.dfs(visited, stack);
 
-    this.narrate = visited;
+    this.story = visited;
 
     window.addEventListener("message", ({ data }: MessageEvent) => {
       if (data.type !== SUBJECT_MESSAGE_TYPE) {
@@ -31,48 +32,56 @@ export class Narrator {
     });
   }
 
-  private dfs = (edges: Edge[], visited: string[], stack: string[]) => {
+  // TODO: prioritized dfs (starting from deeper levels of the graph)
+  private dfs = (visited: string[], stack: string[]) => {
     if (stack.length === 0) {
       return;
     }
 
     const subjectId = last(stack)!;
+    if (visited.includes(subjectId)) {
+      return;
+    }
 
-    const targetNodes = edges
+    const subject = this.nodesStore.getNodeById(subjectId);
+
+    const targetNodes = this.nodesStore.edges
       .filter(
-        (edge) => edge.type === "EXPANSION" && edge.sourceId === subjectId,
+        ({ type, sourceId, targetId }) =>
+          type === "EXPANSION" &&
+          this.nodesStore.getNodeById(sourceId).node.id === subjectId,
       )
-      .map((edge) => this.nodesDictionary[edge.targetId])
+      .map((edge) => this.nodesStore.getNodeById(edge.targetId))
       .filter(
-        (node) =>
-          node &&
-          node.nodeType === "AGGREGATOR" &&
+        ({ node }) =>
+          isAggregator(node) &&
           !visited.includes(node.id) &&
           !stack.includes(node.id),
       );
+
     for (const targetNode of targetNodes) {
-      stack.push(targetNode.id);
-      this.dfs(edges, visited, stack);
+      stack.push(targetNode.node.id);
+      this.dfs(visited, stack);
     }
 
-    visited.push(subjectId);
+    visited.push(subject.node.id);
     stack.pop();
   };
 
   beginStory = () => {
-    this.postMessage(this.narrate[0]);
+    this.postMessage(this.story[0]);
   };
 
   previousChapter = () => {
-    const currentIndex = this.narrate.findIndex((id) => id === this.current);
+    const currentIndex = this.story.findIndex((id) => id === this.current);
     const previousIndex = Math.max(0, currentIndex - 1);
-    this.postMessage(this.narrate[previousIndex]);
+    this.postMessage(this.story[previousIndex]);
   };
 
   nextChapter = () => {
-    const currentIndex = this.narrate.findIndex((id) => id === this.current);
-    const nextIndex = Math.min(this.narrate.length - 1, currentIndex + 1);
-    this.postMessage(this.narrate[nextIndex]);
+    const currentIndex = this.story.findIndex((id) => id === this.current);
+    const nextIndex = Math.min(this.story.length - 1, currentIndex + 1);
+    this.postMessage(this.story[nextIndex]);
   };
 
   private postMessage = (subjectId: string) => {

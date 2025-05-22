@@ -1,23 +1,19 @@
 import React, { RefObject } from "react";
-import { Commit, Node } from "@/types";
-import { isHunkValid } from "@/services/content/isHunkValid.ts";
-import { NodeOverlay } from "@/components/NodeOverlay.tsx";
 import { colors } from "@/public/colors.ts";
+import { NodeOverlay } from "@/components/content/NodeOverlay.tsx";
+import { NodesStore } from "@/services/content/NodesStore.ts";
+import { Hunk } from "@/services/content/graph/Hunk.ts";
 
 export const HunkLineWrapper: React.FC<{
-  commit: Commit;
-  hunk: Node[];
+  nodesStore: NodesStore;
+  hunk: Hunk[];
   element: HTMLElement;
-}> = ({ commit, hunk, element }) => {
+}> = ({ nodesStore, hunk, element }) => {
   if (hunk.length === 0) {
     return;
   }
 
-  if (!isHunkValid(hunk)) {
-    return;
-  }
-
-  const color = colors.HUNK[hunk[0].nodeType];
+  const color = colors.HUNK[hunk[0].node.nodeType];
 
   const ref: RefObject<HTMLDivElement | null> = useRef(null);
   useEffect(() => {
@@ -37,8 +33,8 @@ export const HunkLineWrapper: React.FC<{
     >
       {isHovered && (
         <NodeOverlay
-          commit={commit}
-          hunk={hunk}
+          nodesStore={nodesStore}
+          nodeIds={hunk.map(({ node }) => node.id)}
           style={{ top: 0, right: "100%" }}
         />
       )}

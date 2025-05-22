@@ -1,10 +1,10 @@
-import { Commit } from "@/types";
 import ReactDOM from "react-dom/client";
 import React from "react";
-import { SubjectNode } from "@/components/SubjectNode.tsx";
 import { getSubjectContainer } from "@/services/content/addSubjectVisualization/getSubjectContainer.ts";
+import { SubjectNode } from "@/components/content/SubjectNode.tsx";
+import { NodesStore } from "@/services/content/NodesStore.ts";
 
-export const addSubjectVisualization = (commit: Commit) => {
+export const addSubjectVisualization = (nodesStore: NodesStore) => {
   const subjectContainer = getSubjectContainer();
   if (!subjectContainer) {
     return;
@@ -13,5 +13,5 @@ export const addSubjectVisualization = (commit: Commit) => {
   const reactContainer = document.createElement("div");
   subjectContainer.appendChild(reactContainer);
   const root = ReactDOM.createRoot(reactContainer);
-  root.render(React.createElement(SubjectNode, { commit }));
+  root.render(React.createElement(SubjectNode, { nodesStore }));
 };
