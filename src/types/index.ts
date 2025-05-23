@@ -39,7 +39,7 @@ export interface EdgeJson {
   type: EdgeType;
 }
 
-const aggregatorNodeTypes = [
+export const aggregatorNodeTypes = [
   "SUCCESSIVE",
   "USAGE",
   "COMPONENT",
@@ -95,8 +95,14 @@ export type AggregatorJson =
 
 export type UnifiedNodeJson = HunkJson | AggregatorJson;
 
+export interface Graph {
+  nodes: HunkJson[];
+  edges: EdgeJson[];
+}
+
 export interface Commit {
   url: string;
+  clusters: string[];
   nodes: UnifiedNodeJson[];
   edges: EdgeJson[];
 }

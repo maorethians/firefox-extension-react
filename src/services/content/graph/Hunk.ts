@@ -81,7 +81,9 @@ export class Hunk extends BaseNode {
   };
 
   private getContextString = (nodesStore: NodesStore) => {
-    const contexts = this.getContexts(nodesStore);
+    const contexts = this.getContexts(nodesStore).filter(
+      (context) => context.nodeType === "LOCATION_CONTEXT",
+    );
     const reverseContexts = contexts.reverse();
     return reverseContexts
       .map((context) => (context as Hunk).node.content)

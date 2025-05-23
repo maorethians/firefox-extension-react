@@ -6,6 +6,12 @@ export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   srcDir: "src",
   manifest: {
-    permissions: ["storage"],
+    permissions: ["storage", "tabs"],
+    web_accessible_resources: [
+      {
+        resources: ["graph.html"],
+        matches: [],
+      },
+    ],
   },
 });

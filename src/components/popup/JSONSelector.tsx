@@ -1,7 +1,7 @@
 import React, { ChangeEvent } from "react";
 import { storage } from "wxt/storage";
 import { Commit } from "@/types";
-import { getStorageKey } from "@/services/getStorageKey.ts";
+import { StorageKey } from "@/services/StorageKey.ts";
 import { Button } from "@mui/material";
 
 const getFilesContent = async (files: FileList): Promise<any[]> => {
@@ -41,7 +41,7 @@ const handleFolderSelection = async (event: ChangeEvent<HTMLInputElement>) => {
     return;
   }
 
-  await storage.setItem(getStorageKey(content.url), content);
+  await storage.setItem(StorageKey.getWithUrl(content.url), content);
   await browser.tabs.create({ url: content.url + "?diff=split" });
 };
 

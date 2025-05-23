@@ -6,6 +6,13 @@ export const colors = {
   HUNK: {
     BASE: "#1f4972",
     AGGREGATOR: "#2C2C2C",
+    LOCATION_CONTEXT: "#3E1F47",
+    SEMANTIC_CONTEXT: "#3E1F47",
+    EXTENSION: "#1F3E47",
+    HIGHLIGHT: "#4A0D0D",
+  },
+  NODE: {
+    BASE: "#2C2C2C",
     CONTEXT: "#3E1F47",
     EXTENSION: "#1F3E47",
     HIGHLIGHT: "#4A0D0D",

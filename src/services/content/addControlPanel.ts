@@ -4,7 +4,7 @@ import { getMainApplicationContainer } from "@/services/content/addControlPanel/
 import { ControlPanel } from "@/components/content/ControlPanel.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 
-export const addControlPanel = (nodesStore: NodesStore) => {
+export const addControlPanel = (url: string, nodesStore: NodesStore) => {
   const mainApplicationContainer = getMainApplicationContainer();
   if (!mainApplicationContainer) {
     return;
@@ -16,5 +16,5 @@ export const addControlPanel = (nodesStore: NodesStore) => {
   reactContainer.style.zIndex = "1000";
   mainApplicationContainer.prepend(reactContainer);
   const root = ReactDOM.createRoot(reactContainer);
-  root.render(React.createElement(ControlPanel, { nodesStore }));
+  root.render(React.createElement(ControlPanel, { url, nodesStore }));
 };

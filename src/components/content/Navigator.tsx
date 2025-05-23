@@ -13,7 +13,8 @@ export const Navigator: React.FC<{
     .filter(
       ({ node }) =>
         intersection(nodeIds, node.aggregatorIds).length > 0 &&
-        node.nodeType !== "CONTEXT",
+        node.nodeType !== "LOCATION_CONTEXT" &&
+        node.nodeType !== "SEMANTIC_CONTEXT",
     );
 
   const nodes = nodeIds.map((id) => nodesStore.getNodeById(id));

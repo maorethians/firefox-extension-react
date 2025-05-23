@@ -1,17 +1,18 @@
-import { Commit, EdgeJson } from "@/types";
+import { Commit, EdgeJson, Graph } from "@/types";
 import { SingularPattern } from "@/services/content/graph/SingularPattern.ts";
 import { UsagePattern } from "@/services/content/graph/UsagePattern.ts";
 import { SuccessivePattern } from "@/services/content/graph/SuccessivePattern.ts";
 import { TraversalComponent } from "@/services/content/graph/TraversalComponent.ts";
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
-import { getStorageKey } from "@/services/getStorageKey.ts";
 import React from "react";
+import { StorageKey } from "@/services/StorageKey.ts";
 
 export class NodesStore {
   url = "";
   private nodes: Record<string, BaseNode> = {};
   edges: EdgeJson[] = [];
+  clusters: Graph[] = [];
 
   constructor(commit: Commit) {
     this.init(commit);
@@ -20,11 +21,13 @@ export class NodesStore {
   private init(commit: Commit) {
     this.url = commit.url;
     this.edges = commit.edges;
+    this.clusters = commit.clusters;
 
     for (const node of commit.nodes) {
       switch (node.nodeType) {
         case "BASE":
-        case "CONTEXT":
+        case "LOCATION_CONTEXT":
+        case "SEMANTIC_CONTEXT":
         case "EXTENSION":
           this.nodes[node.id] = new Hunk(node);
           break;
@@ -81,8 +84,9 @@ export class NodesStore {
       url: this.url,
       nodes: this.getNodes().map((node) => node.stringify()),
       edges: this.edges,
+      clusters: this.clusters,
     };
 
-    await storage.setItem(getStorageKey(this.url), commit);
+    await storage.setItem(StorageKey.getWithUrl(this.url), commit);
   };
 }
