@@ -53,10 +53,13 @@ export class TraversalComponent extends BaseNode {
     nodesStore: NodesStore,
     setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     set?: React.Dispatch<React.SetStateAction<string | undefined>>,
-    force?: boolean,
+    options?: {
+      force?: boolean;
+      advanced?: boolean;
+    },
   ): Promise<void> {
     const descriptionCache = this.node.description;
-    if (descriptionCache && !force) {
+    if (descriptionCache && !options?.force) {
       return;
     }
 
@@ -66,7 +69,9 @@ export class TraversalComponent extends BaseNode {
       )
       .map((edge) => nodesStore.getNodeById(edge.targetId));
     for (const child of children) {
-      await child.describeNode(nodesStore, () => {}, undefined, force);
+      await child.describeNode(nodesStore, () => {}, undefined, {
+        force: options?.force,
+      });
     }
     const childrenDescription = compact(
       children.map((child) => child.node.description),

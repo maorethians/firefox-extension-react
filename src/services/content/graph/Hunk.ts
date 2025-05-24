@@ -104,10 +104,14 @@ export class Hunk extends BaseNode {
     nodesStore: NodesStore,
     setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     set?: React.Dispatch<React.SetStateAction<string | undefined>>,
-    force?: boolean,
+    options?: {
+      force?: boolean;
+      // Hunk is always advanced (its contribution to its pattern)
+      advanced?: boolean;
+    },
   ): Promise<void> => {
     const descriptionCache = this.node.description;
-    if (descriptionCache && !force) {
+    if (descriptionCache && !options?.force) {
       return;
     }
 
@@ -117,7 +121,9 @@ export class Hunk extends BaseNode {
       .filter((aggregator) => aggregator.nodeType !== "SINGULAR");
     // TODO: make it batch
     for (const aggregator of aggregators) {
-      await aggregator.describeNode(nodesStore, () => {}, undefined, force);
+      await aggregator.describeNode(nodesStore, () => {}, undefined, {
+        force: options?.force,
+      });
     }
     const aggregatorsDescription = compact(
       aggregators.map((aggregator) => aggregator.node.description),

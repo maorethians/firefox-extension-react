@@ -78,10 +78,13 @@ export class UsagePattern extends BaseNode {
     nodesStore: NodesStore,
     setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     set?: React.Dispatch<React.SetStateAction<string | undefined>>,
-    force?: boolean,
+    options?: {
+      force?: boolean;
+      advanced?: boolean;
+    },
   ): Promise<void> {
     const descriptionCache = this.node.description;
-    if (descriptionCache && !force) {
+    if (descriptionCache && !options?.force) {
       return;
     }
 
@@ -106,7 +109,9 @@ export class UsagePattern extends BaseNode {
     ) as [UsagePattern[], Hunk[]];
 
     for (const usagePattern of usedUsagePatterns) {
-      await usagePattern.describeNode(nodesStore, () => {}, undefined, force);
+      await usagePattern.describeNode(nodesStore, () => {}, undefined, {
+        force: options?.force,
+      });
     }
     const usageDescriptions = compact(
       usedUsagePatterns.map((usagePattern) => usagePattern.node.description),

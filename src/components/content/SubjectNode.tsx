@@ -2,7 +2,7 @@ import React, { RefObject } from "react";
 import { colors } from "@/public/colors.ts";
 import { NodeOverlay } from "@/components/content/NodeOverlay.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { Button } from "@mui/material";
+import { Button, Checkbox, FormControlLabel } from "@mui/material";
 
 export const SUBJECT_MESSAGE_TYPE = "SetSubjectNode";
 
@@ -30,7 +30,7 @@ export const SubjectNode: React.FC<{
   const [subjectDescription, setSubjectDescription] = useState(
     commitNode.description,
   );
-  // const [isAdvanced, setAdvanced] = useState(false);
+  const [isAdvanced, setAdvanced] = useState(false);
 
   window.addEventListener("message", ({ data }: MessageEvent) => {
     if (data.type !== SUBJECT_MESSAGE_TYPE) {
@@ -74,8 +74,7 @@ export const SubjectNode: React.FC<{
             subjectId,
             setProcessing,
             setSubjectDescription,
-            // isAdvanced,
-            true,
+            { force: true, advanced: isAdvanced },
           );
           await nodesStore.entitleNode(subjectId, setSubjectTitle, true);
 
@@ -85,16 +84,16 @@ export const SubjectNode: React.FC<{
         {subjectDescription ? "Regenerate" : "Generate"}
       </Button>
 
-      {/*<FormControlLabel*/}
-      {/*  control={*/}
-      {/*    <Checkbox*/}
-      {/*      checked={isAdvanced}*/}
-      {/*      onChange={() => setAdvanced(!isAdvanced)}*/}
-      {/*      color={"secondary"}*/}
-      {/*    />*/}
-      {/*  }*/}
-      {/*  label={"Advanced"}*/}
-      {/*/>*/}
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={isAdvanced}
+            onChange={() => setAdvanced(!isAdvanced)}
+            color={"secondary"}
+          />
+        }
+        label={"Advanced"}
+      />
 
       <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word" }}>
         {subjectDescription}

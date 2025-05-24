@@ -31,7 +31,10 @@ Give a very short and concise phrase as the title and heading of the change.`;
     _nodesStore: NodesStore,
     _setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     _set?: React.Dispatch<React.SetStateAction<string | undefined>>,
-    _force?: boolean,
+    _options?: {
+      force?: boolean;
+      advanced?: boolean;
+    },
   ): Promise<void> {}
 
   async entitle(

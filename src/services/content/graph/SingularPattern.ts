@@ -14,10 +14,13 @@ export class SingularPattern extends BaseNode {
     nodesStore: NodesStore,
     setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     set?: React.Dispatch<React.SetStateAction<string | undefined>>,
-    force?: boolean,
+    options?: {
+      force?: boolean;
+      advanced?: boolean;
+    },
   ): Promise<void> {
     const descriptionCache = this.node.description;
-    if (descriptionCache && !force) {
+    if (descriptionCache && !options?.force) {
       return;
     }
 
@@ -29,7 +32,9 @@ export class SingularPattern extends BaseNode {
     }
 
     const lead = nodesStore.getNodeById(leadEdge.targetId);
-    await lead.describeNode(nodesStore, setProcessing, set, force);
+    await lead.describeNode(nodesStore, setProcessing, set, {
+      force: options?.force,
+    });
 
     this.node.description = lead.node.description;
   }

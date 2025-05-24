@@ -41,7 +41,6 @@ export class SuccessivePattern extends BaseNode {
     return sequence;
   }
 
-  // TODO: check prompts
   promptTemplates = {
     base: (sequence: Hunk[], nodesStore: NodesStore) => {
       const sequenceContents = sequence.map((node) => {
@@ -81,10 +80,13 @@ export class SuccessivePattern extends BaseNode {
     nodesStore: NodesStore,
     setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     set?: React.Dispatch<React.SetStateAction<string | undefined>>,
-    force?: boolean,
+    options?: {
+      force?: boolean;
+      advanced?: boolean;
+    },
   ): Promise<void> {
     const descriptionCache = this.node.description;
-    if (descriptionCache && !force) {
+    if (descriptionCache && !options?.force) {
       return;
     }
 

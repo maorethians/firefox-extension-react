@@ -60,10 +60,13 @@ export class NodesStore {
     id: string,
     setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     set: React.Dispatch<React.SetStateAction<string | undefined>>,
-    force: boolean,
+    options?: {
+      force?: boolean;
+      advanced?: boolean;
+    },
   ) => {
     const node = this.getNodeById(id);
-    await node.describeNode(this, setProcessing, set, force);
+    await node.describeNode(this, setProcessing, set, options);
 
     await this.updateStorage();
   };
