@@ -19,9 +19,8 @@ const addGraph = async () => {
     return;
   }
 
-  const clusters = commit.clusters.map((cluster) => JSON.parse(cluster));
   const root = ReactDOM.createRoot(document.getElementById("graph")!);
-  root.render(React.createElement(Graph, { clusters }));
+  root.render(React.createElement(Graph, { clusters: commit.clusters }));
 };
 
 addGraph();

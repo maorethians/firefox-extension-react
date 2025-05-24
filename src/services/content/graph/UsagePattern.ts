@@ -23,15 +23,17 @@ export class UsagePattern extends BaseNode {
       const useNode = useNodes[0];
 
       const main = (useNode.nodeType !== "EXTENSION" ? useNodes : usedHunks)
-        .map((usedHunk) => usedHunk.promptTemplates.base(nodesStore))
+        .map((usedHunk) =>
+          usedHunk.promptTemplates.contextualizedBase(nodesStore),
+        )
         .join("\n---\n");
 
       let context;
       if (useNode.nodeType === "EXTENSION") {
-        context = useNode.promptTemplates.base(nodesStore);
+        context = useNode.promptTemplates.contextualizedBase(nodesStore);
       } else {
         const usedContents = usedHunks.map((usedHunk) =>
-          usedHunk.promptTemplates.base(nodesStore),
+          usedHunk.promptTemplates.contextualizedBase(nodesStore),
         );
 
         context = [...usedContents, ...usageDescriptions].join("\n---\n");
@@ -59,7 +61,7 @@ export class UsagePattern extends BaseNode {
       );
 
       result +=
-        "\n\n# Task:\n---\nProvide an explanation focusing on the specific and evident purposes of the give code," +
+        "\n\n# Task:\n---\nProvide an explanation focusing on the specific and evident purposes of the given code," +
         " using the provided context as needed.\n---\n\n# Guidelines:\n---\n- The given code may be either a pure" +
         " code snippet or a transition (with Before/After sections).\n- The provided contexts contain information" +
         " about the identifiers being used in the given code, which can also be a pure code, a code transition, or" +

@@ -10,7 +10,13 @@ const getFilesContent = async (files: FileList): Promise<any[]> => {
       const reader = new FileReader();
 
       reader.onload = (event) => {
-        const content = JSON.parse(event.target?.result as string);
+        let content = JSON.parse(event.target?.result as string);
+        content = {
+          ...content,
+          clusters: content.clusters.map((cluster: string) =>
+            JSON.parse(cluster),
+          ),
+        };
         resolve(content);
       };
 

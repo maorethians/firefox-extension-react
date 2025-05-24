@@ -60,7 +60,7 @@ export class NodesStore {
     id: string,
     setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     set: React.Dispatch<React.SetStateAction<string | undefined>>,
-    force?: boolean,
+    force: boolean,
   ) => {
     const node = this.getNodeById(id);
     await node.describeNode(this, setProcessing, set, force);

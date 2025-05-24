@@ -16,6 +16,12 @@ export class Hunk extends BaseNode {
     base: (nodesStore: NodesStore) => {
       const hunk = this.getHunk(nodesStore);
       return hunk.src
+        ? "## Before:\n" + hunk.src + "\n\n## After:\n" + hunk.content
+        : hunk.content;
+    },
+    contextualizedBase: (nodesStore: NodesStore) => {
+      const hunk = this.getHunk(nodesStore);
+      return hunk.src
         ? "## Before:\n" +
             hunk.src +
             "\n\n## After:\n(" +
@@ -25,9 +31,12 @@ export class Hunk extends BaseNode {
         : "(" + hunk.context + ")\n" + hunk.content;
     },
     description: (aggregatorsDescription: string[], nodesStore: NodesStore) => {
-      const base = this.promptTemplates.base(nodesStore);
+      const base = this.promptTemplates.contextualizedBase(nodesStore);
 
-      let result = "# Code:\n---\n" + base + "\n---\n";
+      const hunk = this.getHunk(nodesStore);
+
+      let result =
+        `# ${hunk.src ? "Change" : "Code"}:\n---\n` + base + "\n---\n";
       if (aggregatorsDescription.length !== 0) {
         result +=
           "\n# Context:\n---\n" +
@@ -38,9 +47,10 @@ export class Hunk extends BaseNode {
       }
 
       result +=
-        "\n# Task:\n---\nIdentify and explain the specific role or function of the given code within the provided" +
-        " context.\n---\n\n# Guidelines:\n---\n- Focus on how the code contributes to the surrounding logic," +
-        " structure, or behavior described in the context.\n- Avoid rephrasing or summarizing the full context.\n---";
+        `\n# Task:\n---\nIdentify and explain the specific role or function of the given ${hunk.src ? "change" : "code"} ${aggregatorsDescription.length !== 0 ? "within the provided context" : ""}.` +
+        (aggregatorsDescription.length !== 0
+          ? `\n---\n\n# Guidelines:\n---\n- Focus on how the code contributes to the surrounding logic, structure, or behavior described in the context.\n- Avoid rephrasing or summarizing the full context.\n---`
+          : "");
 
       return result;
     },

@@ -30,6 +30,7 @@ export const SubjectNode: React.FC<{
   const [subjectDescription, setSubjectDescription] = useState(
     commitNode.description,
   );
+  // const [isAdvanced, setAdvanced] = useState(false);
 
   window.addEventListener("message", ({ data }: MessageEvent) => {
     if (data.type !== SUBJECT_MESSAGE_TYPE) {
@@ -67,13 +68,13 @@ export const SubjectNode: React.FC<{
         loading={isProcessing}
         variant="contained"
         onClick={async () => {
-          // TODO: preprocess
           setProcessing(true);
 
           await nodesStore.describeNode(
             subjectId,
             setProcessing,
             setSubjectDescription,
+            // isAdvanced,
             true,
           );
           await nodesStore.entitleNode(subjectId, setSubjectTitle, true);
@@ -83,6 +84,18 @@ export const SubjectNode: React.FC<{
       >
         {subjectDescription ? "Regenerate" : "Generate"}
       </Button>
+
+      {/*<FormControlLabel*/}
+      {/*  control={*/}
+      {/*    <Checkbox*/}
+      {/*      checked={isAdvanced}*/}
+      {/*      onChange={() => setAdvanced(!isAdvanced)}*/}
+      {/*      color={"secondary"}*/}
+      {/*    />*/}
+      {/*  }*/}
+      {/*  label={"Advanced"}*/}
+      {/*/>*/}
+
       <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word" }}>
         {subjectDescription}
       </pre>

@@ -102,7 +102,7 @@ export interface Graph {
 
 export interface Commit {
   url: string;
-  clusters: string[];
+  clusters: Graph[];
   nodes: UnifiedNodeJson[];
   edges: EdgeJson[];
 }

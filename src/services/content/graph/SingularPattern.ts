@@ -28,7 +28,6 @@ export class SingularPattern extends BaseNode {
       return;
     }
 
-    // TODO: singular cannot have a description
     const lead = nodesStore.getNodeById(leadEdge.targetId);
     await lead.describeNode(nodesStore, setProcessing, set, force);
 

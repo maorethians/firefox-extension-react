@@ -19,9 +19,8 @@ const addClustersList = async () => {
     return;
   }
 
-  const clusters = commit.clusters.map((cluster) => JSON.parse(cluster));
   const root = ReactDOM.createRoot(document.getElementById("clusterList")!);
-  root.render(React.createElement(ClustersList, { clusters }));
+  root.render(React.createElement(ClustersList, { clusters: commit.clusters }));
 };
 
 addClustersList();

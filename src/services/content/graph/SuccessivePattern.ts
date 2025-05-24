@@ -8,14 +8,19 @@ import React from "react";
 
 export class SuccessivePattern extends BaseNode {
   declare node: SuccessivePatternJson;
+  sequenceCache: Hunk[] | undefined;
 
   constructor(node: SuccessivePatternJson) {
     super(node);
   }
 
   getSequence(nodesStore: NodesStore) {
+    if (this.sequenceCache) {
+      return this.sequenceCache;
+    }
+
     const head = nodesStore.getNodeById(this.node.headId);
-    const sequence = [head];
+    const sequence: Hunk[] = [head as Hunk];
 
     while (true) {
       const current = last(sequence);
@@ -28,36 +33,45 @@ export class SuccessivePattern extends BaseNode {
       }
 
       const next = nodesStore.getNodeById(edgeToNext.targetId);
-      sequence.push(next);
+      sequence.push(next as Hunk);
     }
+
+    this.sequenceCache = sequence;
 
     return sequence;
   }
 
   // TODO: check prompts
   promptTemplates = {
-    base: (sequence: BaseNode[], nodesStore: NodesStore) => {
+    base: (sequence: Hunk[], nodesStore: NodesStore) => {
       const sequenceContents = sequence.map((node) => {
-        const hunkNode = node as Hunk;
-        const hunk = hunkNode.getHunk(nodesStore);
+        const hunk = node.getHunk(nodesStore);
 
-        let result = hunkNode.promptTemplates.base(nodesStore);
+        let result = node.promptTemplates.base(nodesStore);
         if (hunk.src) {
-          result = `
----
-${result}
----`;
+          result = "---\n" + result + "\n---";
         }
 
         return result;
       });
-      return sequenceContents.join("\n");
-    },
-    description: (sequence: BaseNode[], nodesStore: NodesStore) => {
-      let result = this.promptTemplates.base(sequence, nodesStore);
 
-      result += `
-As a review assistant, your task is to help the reviewer understand the purpose of this code by describing all evident intentions behind it.`;
+      const hunk = sequence[0].getHunk(nodesStore);
+
+      return "(" + hunk.context + ")\n" + sequenceContents.join("\n");
+    },
+    description: (sequence: Hunk[], nodesStore: NodesStore) => {
+      let result =
+        "# Code:\n---\n" +
+        this.promptTemplates.base(sequence, nodesStore) +
+        "\n---";
+
+      result +=
+        "\n\n# Task:\n---\nProvide an explanation focusing on the specific and evident purposes of the given" +
+        " code.\n---\n\n# Guidelines:\n---\n- The given code may be either a pure code snippet or a transition" +
+        " (with Before/After sections).\n- For pure code, focus on its purpose and behavior as-is.\n- For" +
+        " transitions, focus on what is added, removed, or modified, and the specific evident purposes behind those" +
+        " changes.\n- Avoid focusing on unchanged parts of the transitions, unless needed to clarify the" +
+        " changes.\n- Refer to code elements and identifiers in your explanation to ensure clarity.\n---";
 
       return result;
     },
