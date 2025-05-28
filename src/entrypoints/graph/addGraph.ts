@@ -20,7 +20,7 @@ const addGraph = async () => {
   }
 
   const root = ReactDOM.createRoot(document.getElementById("graph")!);
-  root.render(React.createElement(Graph, { clusters: commit.clusters }));
+  root.render(React.createElement(Graph, { commit }));
 };
 
 addGraph();

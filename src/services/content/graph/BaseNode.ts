@@ -3,6 +3,12 @@ import { NodesStore } from "@/services/content/NodesStore.ts";
 import { GroqClient } from "@/services/content/llm/GroqClient.ts";
 import React from "react";
 import { AIMessageChunk } from "@langchain/core/messages";
+import { IterableReadableStream } from "@@/node_modules/@langchain/core/dist/utils/stream";
+import { ChainValues } from "@@/node_modules/@langchain/core/dist/utils/types";
+import { tool } from "@langchain/core/tools";
+import { store } from "@/services/content/llm/store.ts";
+import { nanoid } from "nanoid";
+import { z } from "zod";
 
 export abstract class BaseNode {
   node: UnifiedNodeJson;
@@ -13,18 +19,47 @@ export abstract class BaseNode {
     this.nodeType = node.nodeType;
   }
 
+  tools = {
+    description: (surroundings: string[]) => {
+      const randomString = nanoid();
+      store[randomString] = surroundings.length;
+
+      return tool(
+        () => {
+          const remainingIterations = store[randomString];
+          if (remainingIterations === 0) {
+            return "There is no more context extension.";
+          }
+
+          store[randomString] = remainingIterations - 1;
+
+          const index = surroundings.length - remainingIterations;
+          return (
+            "# Surrounding:\n---\n" +
+            surroundings[index] +
+            "\n---\n\n# Remaining Expansions:" +
+            remainingIterations
+          );
+        },
+        {
+          name: "getSurrounding",
+          description:
+            "Returns the code or change along with its surrounding context to support better understanding.\n Each" +
+            " time the tool is called, it expands the surrounding boundaries, providing progressively broader" +
+            " visibility into the code or change location.",
+          schema: z.object({}),
+        },
+      );
+    },
+  };
+
   promptTemplates: Record<string, (...args: any[]) => string> = {};
 
   _basePromptTemplates: typeof this.promptTemplates = {
-    title: (description: string) => {
-      return `
-Below is the description of a code change:
----
-${description}
----
-      
-Give a very short and concise phrase as the title and heading of the change.`;
-    },
+    title: (description: string) =>
+      "# Description:\n---\n" +
+      description +
+      "\n---\n\n# Task:\n---\nGenerate a concise phrase as the title of the description.\n---",
   };
 
   async describeNode(
@@ -34,11 +69,13 @@ Give a very short and concise phrase as the title and heading of the change.`;
     _options?: {
       force?: boolean;
       advanced?: boolean;
+      entitle?: boolean;
+      agent?: boolean;
     },
   ): Promise<void> {}
 
   async entitle(
-    set: React.Dispatch<React.SetStateAction<string | undefined>>,
+    set?: React.Dispatch<React.SetStateAction<string | undefined>>,
     force?: boolean,
   ): Promise<void> {
     const titleCache = this.node.title;
@@ -54,9 +91,6 @@ Give a very short and concise phrase as the title and heading of the change.`;
     const generator = await GroqClient.stream(
       this._basePromptTemplates.title(description),
     );
-    if (!generator) {
-      return;
-    }
 
     await this.streamField("title", () => {}, generator, set);
   }
@@ -68,21 +102,33 @@ Give a very short and concise phrase as the title and heading of the change.`;
   async streamField(
     fieldKey: "description" | "title",
     setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
-    generator?: ReadableStream<AIMessageChunk>,
+    generator?:
+      | ReadableStream<AIMessageChunk>
+      | IterableReadableStream<ChainValues>,
     set?: React.Dispatch<React.SetStateAction<string | undefined>>,
   ) {
     if (!generator) {
+      setProcessing(false);
       return;
     }
-
-    setProcessing(false);
 
     this.node[fieldKey] = "";
     set?.(this.node[fieldKey]);
 
     for await (const chunk of generator) {
-      this.node[fieldKey] += chunk.content;
-      set?.(this.node[fieldKey]);
+      if (chunk.content || (chunk as ChainValues).output) {
+        setProcessing(false);
+
+        let content = "";
+        if (chunk.content) {
+          content = chunk.content;
+        } else if ((chunk as ChainValues).output) {
+          content = (chunk as ChainValues).output;
+        }
+
+        this.node[fieldKey] += content;
+        set?.(this.node[fieldKey]);
+      }
     }
   }
 }

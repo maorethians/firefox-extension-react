@@ -15,22 +15,22 @@ export class UsagePattern extends BaseNode {
 
   promptTemplates = {
     base: (
-      useNodes: Hunk[],
+      useHunks: Hunk[],
       usedHunks: Hunk[],
       usageDescriptions: string[],
       nodesStore: NodesStore,
     ) => {
-      const useNode = useNodes[0];
+      const useHunk = useHunks[0];
 
-      const main = (useNode.nodeType !== "EXTENSION" ? useNodes : usedHunks)
+      const main = (useHunk.nodeType !== "EXTENSION" ? useHunks : usedHunks)
         .map((usedHunk) =>
           usedHunk.promptTemplates.contextualizedBase(nodesStore),
         )
         .join("\n---\n");
 
       let context;
-      if (useNode.nodeType === "EXTENSION") {
-        context = useNode.promptTemplates.contextualizedBase(nodesStore);
+      if (useHunk.nodeType === "EXTENSION") {
+        context = useHunk.promptTemplates.contextualizedBase(nodesStore);
       } else {
         const usedContents = usedHunks.map((usedHunk) =>
           usedHunk.promptTemplates.contextualizedBase(nodesStore),
@@ -48,13 +48,13 @@ export class UsagePattern extends BaseNode {
       );
     },
     description: (
-      useNodes: Hunk[],
+      useHunks: Hunk[],
       usedHunks: Hunk[],
       usageDescriptions: string[],
       nodesStore: NodesStore,
     ) => {
       let result = this.promptTemplates.base(
-        useNodes,
+        useHunks,
         usedHunks,
         usageDescriptions,
         nodesStore,
@@ -81,6 +81,8 @@ export class UsagePattern extends BaseNode {
     options?: {
       force?: boolean;
       advanced?: boolean;
+      entitle?: boolean;
+      agent?: boolean;
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
@@ -88,13 +90,13 @@ export class UsagePattern extends BaseNode {
       return;
     }
 
-    const useNodes = nodesStore.edges
+    const useHunks = nodesStore.edges
       .filter(
         (edge) => edge.type === "EXPANSION" && edge.sourceId === this.node.id,
       )
       .map((edge) => nodesStore.getNodeById(edge.targetId))
       .filter(({ node }) => isHunk(node)) as Hunk[];
-    const useNodesId = useNodes.map((useNode) => useNode.node.id);
+    const useNodesId = useHunks.map((useNode) => useNode.node.id);
 
     const usedNodes = nodesStore.edges
       .filter(
@@ -111,20 +113,51 @@ export class UsagePattern extends BaseNode {
     for (const usagePattern of usedUsagePatterns) {
       await usagePattern.describeNode(nodesStore, () => {}, undefined, {
         force: options?.force,
+        entitle: true,
+        agent: options?.agent,
       });
     }
     const usageDescriptions = compact(
       usedUsagePatterns.map((usagePattern) => usagePattern.node.description),
     );
 
+    const useNode = useHunks[0];
+    const mainHunks = useNode.nodeType !== "EXTENSION" ? useHunks : usedHunks;
+    const hunksSemanticContexts = mainHunks.map((hunk) =>
+      hunk.getSemanticContexts(nodesStore),
+    );
+
+    const semanticContexts: string[] = [];
+    let index = -1;
+    while (true) {
+      const semanticContext = hunksSemanticContexts.map(
+        (hunkSemanticContexts) => hunkSemanticContexts[++index],
+      );
+      if (semanticContext.length > compact(semanticContext).length) {
+        break;
+      }
+
+      const semanticContextContent = semanticContext.map(
+        (sc) => sc.getHunk(nodesStore).content,
+      );
+      semanticContexts.push(semanticContextContent.join("\n---\n"));
+    }
+
     const generator = await GroqClient.stream(
       this.promptTemplates.description(
-        useNodes,
+        useHunks,
         usedHunks,
         usageDescriptions,
         nodesStore,
       ),
+      options?.agent && semanticContexts.length > 0
+        ? [this.tools.description(semanticContexts)]
+        : undefined,
     );
     await this.streamField("description", setProcessing, generator, set);
+
+    if (options?.entitle) {
+      await this.entitle();
+    }
   }
 }

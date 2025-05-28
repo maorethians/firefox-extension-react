@@ -5,16 +5,17 @@ import React, { RefObject, useRef, useState } from "react";
 import CytoscapeComponent from "react-cytoscapejs";
 import {
   aggregatorNodeTypes,
+  Commit,
   EdgeJson,
-  Graph as GraphType,
   HunkJson,
   UnifiedNodeJson,
 } from "@/types";
 import { colors } from "@/public/colors.ts";
+import { getNodeColor } from "@/services/content/getNodeColor.ts";
 
 export const CLUSTER_MESSAGE = "SetCluster";
 
-export const Graph: React.FC<{ clusters: GraphType[] }> = ({ clusters }) => {
+export const Graph: React.FC<{ commit: Commit }> = ({ commit }) => {
   const cyRef: RefObject<cytoscape.Core | null> = useRef(null);
 
   const [nodes, setNodes] = useState([] as UnifiedNodeJson[]);
@@ -25,27 +26,18 @@ export const Graph: React.FC<{ clusters: GraphType[] }> = ({ clusters }) => {
       return;
     }
 
-    const { clusterIndex } = data.data;
-    const cluster = clusters[clusterIndex];
+    const { commit: c, clusterIndex } = data.data;
+    const graph = c
+      ? { nodes: commit.nodes, edges: commit.edges }
+      : commit.clusters[clusterIndex];
 
-    setNodes(cluster.nodes);
-    setEdges(cluster.edges);
+    setNodes(graph.nodes);
+    setEdges(graph.edges);
   });
 
   const graphNodes: cytoscape.CytoscapeOptions["elements"] = [];
   nodes.forEach((node) => {
-    let nodeColor: string;
-    switch (node.nodeType) {
-      case "SEMANTIC_CONTEXT":
-      case "LOCATION_CONTEXT":
-        nodeColor = colors.NODE.CONTEXT;
-        break;
-      case "EXTENSION":
-        nodeColor = colors.NODE.EXTENSION;
-        break;
-      default:
-        nodeColor = colors.NODE.BASE;
-    }
+    const nodeColor = getNodeColor(node);
 
     graphNodes.push({
       data: {

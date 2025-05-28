@@ -12,6 +12,17 @@ export const ClustersList: React.FC<{ clusters: Graph[] }> = ({ clusters }) => {
         backgroundColor: colors.PRIMARY,
       }}
     >
+      <Button
+        variant="contained"
+        onClick={() => {
+          window.postMessage({
+            type: CLUSTER_MESSAGE,
+            data: { commit: true },
+          });
+        }}
+      >
+        {`commit`}
+      </Button>
       {clusters.map((_cluster, index) => (
         <Button
           variant="contained"

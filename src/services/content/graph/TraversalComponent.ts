@@ -37,14 +37,16 @@ export class TraversalComponent extends BaseNode {
       const reasons = (this.node as TraversalComponentJson).reasons;
 
       result +=
-        "\n\n# Task:\n---\nProvide an explanation focusing on the collective intent behind these" +
-        " components.\n---\n\nGuidelines:\n---\n- Identify concrete purposes behind the components instead of" +
-        " summarizing them vaguely or discussing general goals.\n" +
+        "\n\n# Task:\n---\nAnalyze the descriptions and provide a cohesive explanation that captures the collective" +
+        " intent behind the components.\n---\n\nGuidelines:\n---\n- Be specific: explain the concrete behavior or" +
+        " outcome they support, not just general goals.\n- Do not repeat or rephrase the same ideas in different" +
+        " words. Each point should add new insight." +
         (reasons
-          ? "- Use common code snippets to find relations between components as needed in your explanation.\n"
+          ? "\n- Use common code snippets to find relations between components as needed in your explanation."
           : "") +
         "\n---\n";
 
+      console.log(result);
       return result;
     },
   };
@@ -56,6 +58,8 @@ export class TraversalComponent extends BaseNode {
     options?: {
       force?: boolean;
       advanced?: boolean;
+      entitle?: boolean;
+      agent?: boolean;
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
@@ -71,6 +75,8 @@ export class TraversalComponent extends BaseNode {
     for (const child of children) {
       await child.describeNode(nodesStore, () => {}, undefined, {
         force: options?.force,
+        entitle: true,
+        agent: options?.agent,
       });
     }
     const childrenDescription = compact(
@@ -79,6 +85,7 @@ export class TraversalComponent extends BaseNode {
 
     if (childrenDescription.length === 1) {
       this.node.description = childrenDescription[0];
+      this.node.title = children[0].node.title;
       set?.(this.node.description);
       return;
     }
@@ -87,5 +94,9 @@ export class TraversalComponent extends BaseNode {
       this.promptTemplates.description(childrenDescription),
     );
     await this.streamField("description", setProcessing, generator, set);
+
+    if (options?.entitle) {
+      await this.entitle();
+    }
   }
 }

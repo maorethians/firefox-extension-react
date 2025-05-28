@@ -1,5 +1,8 @@
 import { ChatGroq } from "@langchain/groq";
 import { getGroqClient } from "@/services/content/llm/getGroqClient.ts";
+import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { StructuredToolInterface } from "@langchain/core/tools";
 
 export class GroqClient {
   model: ChatGroq;
@@ -42,17 +45,34 @@ export class GroqClient {
     return groqClient.generate(prompt);
   }
 
-  async stream(prompt: string) {
-    return this.model.stream(prompt);
+  async stream(prompt: string, tools?: StructuredToolInterface[]) {
+    try {
+      if (tools) {
+        const agent = createToolCallingAgent({
+          llm: this.model,
+          prompt: ChatPromptTemplate.fromMessages([
+            // prompt contains code which may collide with LangChain prompt template engine
+            ["system", "{prompt}"],
+            ["placeholder", "{agent_scratchpad}"],
+          ]),
+          tools,
+        });
+        const executor = new AgentExecutor({ agent, tools });
+        return executor.stream({ prompt });
+      }
+
+      return this.model.stream(prompt);
+    } catch (e) {
+      return;
+    }
   }
 
-  static async stream(prompt: string) {
-    console.log(prompt);
+  static async stream(prompt: string, tools?: StructuredToolInterface[]) {
     const groqClient = await getGroqClient();
     if (!groqClient) {
       return;
     }
 
-    return groqClient.stream(prompt);
+    return groqClient.stream(prompt, tools);
   }
 }

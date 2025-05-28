@@ -63,12 +63,12 @@ export class NodesStore {
     options?: {
       force?: boolean;
       advanced?: boolean;
+      entitle?: boolean;
+      agent?: boolean;
     },
   ) => {
     const node = this.getNodeById(id);
     await node.describeNode(this, setProcessing, set, options);
-
-    await this.updateStorage();
   };
 
   entitleNode = async (
@@ -78,11 +78,9 @@ export class NodesStore {
   ) => {
     const node = this.getNodeById(id);
     await node.entitle(set, force);
-
-    await this.updateStorage();
   };
 
-  private updateStorage = async () => {
+  updateStorage = async () => {
     const commit: Commit = {
       url: this.url,
       nodes: this.getNodes().map((node) => node.stringify()),

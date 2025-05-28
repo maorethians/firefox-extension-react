@@ -16,6 +16,11 @@ export const SubjectNode: React.FC<{
 
   const [isProcessing, setProcessing] = React.useState(false);
   const [subjectId, setSubjectId] = useState(commitNode.id);
+  const [subjectTitle, setSubjectTitle] = useState(commitNode.title);
+  const [subjectDescription, setSubjectDescription] = useState(
+    commitNode.description,
+  );
+  const [subjectLogs, setSubjectLogs] = React.useState(commitNode.logs);
   const setSubject = (id: string) => {
     const newNode = nodesStore.getNodeById(id);
     if (!newNode) {
@@ -25,12 +30,12 @@ export const SubjectNode: React.FC<{
     setSubjectId(newNode.node.id);
     setSubjectTitle(newNode.node.title);
     setSubjectDescription(newNode.node.description);
+    setSubjectLogs(newNode.node.logs);
   };
-  const [subjectTitle, setSubjectTitle] = useState(commitNode.title);
-  const [subjectDescription, setSubjectDescription] = useState(
-    commitNode.description,
-  );
+
   const [isAdvanced, setAdvanced] = useState(false);
+  const [isAgent, setAgent] = useState(true);
+  const [logsExpanded, setLogsExpanded] = useState(false);
 
   window.addEventListener("message", ({ data }: MessageEvent) => {
     if (data.type !== SUBJECT_MESSAGE_TYPE) {
@@ -74,11 +79,13 @@ export const SubjectNode: React.FC<{
             subjectId,
             setProcessing,
             setSubjectDescription,
-            { force: true, advanced: isAdvanced },
+            { force: true, advanced: isAdvanced, agent: isAgent },
           );
           await nodesStore.entitleNode(subjectId, setSubjectTitle, true);
 
           setProcessing(false);
+
+          await nodesStore.updateStorage();
         }}
       >
         {subjectDescription ? "Regenerate" : "Generate"}
@@ -95,9 +102,32 @@ export const SubjectNode: React.FC<{
         label={"Advanced"}
       />
 
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={isAgent}
+            onChange={() => setAgent(!isAgent)}
+            color={"secondary"}
+          />
+        }
+        label={"Agent"}
+      />
+
       <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word" }}>
         {subjectDescription}
       </pre>
+
+      {subjectLogs && subjectLogs.length > 0 && (
+        <div>
+          <Button
+            variant="contained"
+            onClick={() => setLogsExpanded(!logsExpanded)}
+          >
+            Logs
+          </Button>
+          {logsExpanded && subjectLogs.map((log) => <p>{log}</p>)}
+        </div>
+      )}
     </div>
   );
 };

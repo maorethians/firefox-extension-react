@@ -83,6 +83,8 @@ export class SuccessivePattern extends BaseNode {
     options?: {
       force?: boolean;
       advanced?: boolean;
+      entitle?: boolean;
+      agent?: boolean;
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
@@ -90,12 +92,27 @@ export class SuccessivePattern extends BaseNode {
       return;
     }
 
+    const sequence = this.getSequence(nodesStore);
+    const semanticContexts = sequence[0].getSemanticContexts(nodesStore);
     const generator = await GroqClient.stream(
       this.promptTemplates.description(
         this.getSequence(nodesStore),
         nodesStore,
       ),
+      options?.agent && semanticContexts.length > 0
+        ? [
+            this.tools.description(
+              semanticContexts.map(
+                (context) => context.getHunk(nodesStore).content,
+              ),
+            ),
+          ]
+        : undefined,
     );
     await this.streamField("description", setProcessing, generator, set);
+
+    if (options?.entitle) {
+      await this.entitle();
+    }
   }
 }

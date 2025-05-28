@@ -3,6 +3,7 @@ import { intersection, uniq } from "lodash";
 import { Button } from "@mui/material";
 import { SUBJECT_MESSAGE_TYPE } from "@/components/content/SubjectNode.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
+import { getNodeColor } from "@/services/content/getNodeColor.ts";
 
 export const Navigator: React.FC<{
   nodeIds: string[];
@@ -13,8 +14,9 @@ export const Navigator: React.FC<{
     .filter(
       ({ node }) =>
         intersection(nodeIds, node.aggregatorIds).length > 0 &&
+        node.nodeType !== "SEMANTIC_CONTEXT" &&
         node.nodeType !== "LOCATION_CONTEXT" &&
-        node.nodeType !== "SEMANTIC_CONTEXT",
+        node.nodeType !== "EXTENSION",
     );
 
   const nodes = nodeIds.map((id) => nodesStore.getNodeById(id));
@@ -40,6 +42,7 @@ export const Navigator: React.FC<{
                     data: { subjectId: parent.node.id },
                   });
                 }}
+                sx={{ backgroundColor: getNodeColor(parent) }}
               >
                 {parent.node.title ?? parent.node.id}
               </Button>
@@ -60,6 +63,7 @@ export const Navigator: React.FC<{
                     data: { subjectId: child.node.id },
                   });
                 }}
+                sx={{ backgroundColor: getNodeColor(child) }}
               >
                 {child.node.title ?? child.node.id}
               </Button>

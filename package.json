@@ -26,8 +26,9 @@
     "@types/react-cytoscapejs": "^1.2.5",
     "bluebird": "^3.7.2",
     "cytoscape": "^3.31.0",
-    "langchain": "^0.3.21",
+    "langchain": "^0.3.27",
     "lodash": "^4.17.21",
+    "nanoid": "^5.1.5",
     "react": "^19.0.0",
     "react-cytoscapejs": "^2.0.0",
     "react-dom": "^19.0.0"

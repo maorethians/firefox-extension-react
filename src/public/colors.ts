@@ -16,6 +16,7 @@ export const colors = {
     CONTEXT: "#3E1F47",
     EXTENSION: "#1F3E47",
     HIGHLIGHT: "#4A0D0D",
+    EXPANSION: "#65581b",
   },
   EDGE: {
     DEF_USE: "#E67E22",

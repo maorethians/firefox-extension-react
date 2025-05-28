@@ -7,6 +7,7 @@ import React from "react";
 
 export class Hunk extends BaseNode {
   declare node: HunkJson;
+  contexts: Hunk[] | undefined;
 
   constructor(node: HunkJson) {
     super(node);
@@ -70,7 +71,11 @@ export class Hunk extends BaseNode {
   };
 
   private getContexts = (nodesStore: NodesStore) => {
-    const result: BaseNode[] = [];
+    if (this.contexts) {
+      return this.contexts;
+    }
+
+    const contexts: Hunk[] = [];
 
     let current = nodesStore.getNodeById(this.node.id);
     while (true) {
@@ -81,13 +86,21 @@ export class Hunk extends BaseNode {
         break;
       }
 
-      const next = nodesStore.getNodeById(edgeToNext.targetId);
-      result.push(next);
+      const next = nodesStore.getNodeById(edgeToNext.targetId) as Hunk;
+      contexts.push(next);
 
       current = next;
     }
 
-    return result;
+    this.contexts = contexts;
+
+    return contexts;
+  };
+
+  getSemanticContexts = (nodesStore: NodesStore) => {
+    return this.getContexts(nodesStore).filter(
+      (context) => context.nodeType === "SEMANTIC_CONTEXT",
+    );
   };
 
   private getContextString = (nodesStore: NodesStore) => {
@@ -108,6 +121,8 @@ export class Hunk extends BaseNode {
       force?: boolean;
       // Hunk is always advanced (its contribution to its pattern)
       advanced?: boolean;
+      entitle?: boolean;
+      agent?: boolean;
     },
   ): Promise<void> => {
     const descriptionCache = this.node.description;
@@ -123,15 +138,31 @@ export class Hunk extends BaseNode {
     for (const aggregator of aggregators) {
       await aggregator.describeNode(nodesStore, () => {}, undefined, {
         force: options?.force,
+        entitle: true,
+        agent: options?.agent,
       });
     }
     const aggregatorsDescription = compact(
       aggregators.map((aggregator) => aggregator.node.description),
     );
 
+    const semanticContexts = this.getSemanticContexts(nodesStore);
     const generator = await GroqClient.stream(
       this.promptTemplates.description(aggregatorsDescription, nodesStore),
+      options?.agent && semanticContexts.length > 0
+        ? [
+            this.tools.description(
+              semanticContexts.map(
+                (context) => context.getHunk(nodesStore).content,
+              ),
+            ),
+          ]
+        : undefined,
     );
     await this.streamField("description", setProcessing, generator, set);
+
+    if (options?.entitle) {
+      await this.entitle();
+    }
   };
 }

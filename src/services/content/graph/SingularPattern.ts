@@ -17,6 +17,8 @@ export class SingularPattern extends BaseNode {
     options?: {
       force?: boolean;
       advanced?: boolean;
+      entitle?: boolean;
+      agent?: boolean;
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
@@ -34,8 +36,12 @@ export class SingularPattern extends BaseNode {
     const lead = nodesStore.getNodeById(leadEdge.targetId);
     await lead.describeNode(nodesStore, setProcessing, set, {
       force: options?.force,
+      entitle: true,
     });
-
     this.node.description = lead.node.description;
+
+    if (options?.entitle) {
+      await this.entitle();
+    }
   }
 }
