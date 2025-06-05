@@ -5,8 +5,9 @@ import React, { RefObject, useRef, useState } from "react";
 import CytoscapeComponent from "react-cytoscapejs";
 import {
   aggregatorNodeTypes,
-  Commit,
+  Cluster,
   EdgeJson,
+  Hierarchy,
   HunkJson,
   UnifiedNodeJson,
 } from "@/types";
@@ -15,7 +16,10 @@ import { getNodeColor } from "@/services/content/getNodeColor.ts";
 
 export const CLUSTER_MESSAGE = "SetCluster";
 
-export const Graph: React.FC<{ commit: Commit }> = ({ commit }) => {
+export const Graph: React.FC<{ hierarchy: Hierarchy; clusters: Cluster[] }> = ({
+  hierarchy,
+  clusters,
+}) => {
   const cyRef: RefObject<cytoscape.Core | null> = useRef(null);
 
   const [nodes, setNodes] = useState([] as UnifiedNodeJson[]);
@@ -28,8 +32,8 @@ export const Graph: React.FC<{ commit: Commit }> = ({ commit }) => {
 
     const { commit: c, clusterIndex } = data.data;
     const graph = c
-      ? { nodes: commit.nodes, edges: commit.edges }
-      : commit.clusters[clusterIndex];
+      ? { nodes: hierarchy.nodes, edges: hierarchy.edges }
+      : clusters[clusterIndex];
 
     setNodes(graph.nodes);
     setEdges(graph.edges);

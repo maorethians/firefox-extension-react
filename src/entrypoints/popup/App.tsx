@@ -1,15 +1,16 @@
-import "./App.css";
-import { JSONSelector } from "@/components/popup/JSONSelector.tsx";
-import { APIKey } from "@/components/popup/APIKey.tsx";
 import { theme } from "@/public/colors.ts";
 import { ThemeProvider } from "@mui/material";
+import { LLMKey } from "@/components/popup/LLMKey.tsx";
+import { DockerRun } from "@/components/popup/DockerRun.tsx";
+import { CheckContainer } from "@/components/popup/CheckContainer.tsx";
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <div>
-        <JSONSelector />
-        <APIKey />
+        <LLMKey />
+        <DockerRun />
+        <CheckContainer />
       </div>
     </ThemeProvider>
   );

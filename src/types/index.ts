@@ -95,14 +95,12 @@ export type AggregatorJson =
 
 export type UnifiedNodeJson = HunkJson | AggregatorJson;
 
-export interface Graph {
+export interface Cluster {
   nodes: HunkJson[];
   edges: EdgeJson[];
 }
 
-export interface Commit {
-  url: string;
-  clusters: Graph[];
+export interface Hierarchy {
   nodes: UnifiedNodeJson[];
   edges: EdgeJson[];
 }

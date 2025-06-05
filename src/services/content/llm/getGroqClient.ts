@@ -11,7 +11,8 @@ export const getGroqClient = async () => {
   // if (typeof key !== "string") {
   //   return;
   // }
-  const key = "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";
+  const key =
+    "xai-4kSEUTlj9UXtVb8QmpGFvQVH5n6WiA8tnfH5laTfSy85eOakQzsorfT636bshgHuhjd4GvpFPZIoMitP";
 
   // const isKeyValid = await GroqClient.verifyKey(key);
   // if (!isKeyValid) {

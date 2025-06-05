@@ -1,10 +1,12 @@
 import React from "react";
 import { colors } from "@/public/colors.ts";
 import { Button } from "@mui/material";
-import { Graph } from "@/types";
+import { Cluster } from "@/types";
 import { CLUSTER_MESSAGE } from "@/components/content/Graph.tsx";
 
-export const ClustersList: React.FC<{ clusters: Graph[] }> = ({ clusters }) => {
+export const ClustersList: React.FC<{ clusters: Cluster[] }> = ({
+  clusters,
+}) => {
   console.log(clusters);
   return (
     <div

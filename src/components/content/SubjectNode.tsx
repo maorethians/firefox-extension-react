@@ -20,7 +20,6 @@ export const SubjectNode: React.FC<{
   const [subjectDescription, setSubjectDescription] = useState(
     commitNode.description,
   );
-  const [subjectLogs, setSubjectLogs] = React.useState(commitNode.logs);
   const setSubject = (id: string) => {
     const newNode = nodesStore.getNodeById(id);
     if (!newNode) {
@@ -30,7 +29,6 @@ export const SubjectNode: React.FC<{
     setSubjectId(newNode.node.id);
     setSubjectTitle(newNode.node.title);
     setSubjectDescription(newNode.node.description);
-    setSubjectLogs(newNode.node.logs);
   };
 
   const [isAdvanced, setAdvanced] = useState(false);
@@ -116,18 +114,6 @@ export const SubjectNode: React.FC<{
       <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word" }}>
         {subjectDescription}
       </pre>
-
-      {subjectLogs && subjectLogs.length > 0 && (
-        <div>
-          <Button
-            variant="contained"
-            onClick={() => setLogsExpanded(!logsExpanded)}
-          >
-            Logs
-          </Button>
-          {logsExpanded && subjectLogs.map((log) => <p>{log}</p>)}
-        </div>
-      )}
     </div>
   );
 };

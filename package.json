@@ -24,6 +24,7 @@
     "@types/cytoscape": "^3.21.9",
     "@types/lodash": "^4.17.15",
     "@types/react-cytoscapejs": "^1.2.5",
+    "axios": "^1.9.0",
     "bluebird": "^3.7.2",
     "cytoscape": "^3.31.0",
     "langchain": "^0.3.27",
@@ -31,7 +32,8 @@
     "nanoid": "^5.1.5",
     "react": "^19.0.0",
     "react-cytoscapejs": "^2.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "uri-js": "^4.4.1"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.280",

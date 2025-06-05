@@ -14,18 +14,6 @@ export class GroqClient {
     });
   }
 
-  static verifyKey = async (key: string): Promise<boolean> => {
-    try {
-      await new ChatGroq({
-        model: "llama3-8b-8192",
-        apiKey: key,
-      }).invoke("Hi!");
-      return true;
-    } catch (e) {
-      return false;
-    }
-  };
-
   async generate(prompt: string): Promise<string | undefined> {
     const result = await this.model.invoke(prompt);
 

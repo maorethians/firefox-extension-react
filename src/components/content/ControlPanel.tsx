@@ -3,7 +3,6 @@ import { colors } from "@/public/colors.ts";
 import { Narrator } from "@/services/content/Narrator.ts";
 import { Button } from "@mui/material";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { getCommitSha } from "@/services/getCommitSha.ts";
 import { OPEN_TAB_MESSAGE } from "@/entrypoints/background.ts";
 
 export const ControlPanel: React.FC<{
@@ -30,7 +29,7 @@ export const ControlPanel: React.FC<{
       <Button
         variant="contained"
         onClick={async () => {
-          const parameterizedUrl = `${browser.runtime.getURL("/graph.html")}?sha=${getCommitSha(url)}`;
+          const parameterizedUrl = `${browser.runtime.getURL("/graph.html")}?url=${url}`;
           browser.runtime.sendMessage({
             action: OPEN_TAB_MESSAGE,
             url: parameterizedUrl,

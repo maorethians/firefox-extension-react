@@ -1,4 +1,4 @@
-import { Commit, EdgeJson, Graph } from "@/types";
+import { EdgeJson, Hierarchy, UnifiedNodeJson } from "@/types";
 import { SingularPattern } from "@/services/content/graph/SingularPattern.ts";
 import { UsagePattern } from "@/services/content/graph/UsagePattern.ts";
 import { SuccessivePattern } from "@/services/content/graph/SuccessivePattern.ts";
@@ -9,21 +9,19 @@ import React from "react";
 import { StorageKey } from "@/services/StorageKey.ts";
 
 export class NodesStore {
-  url = "";
+  private readonly id: string;
   private nodes: Record<string, BaseNode> = {};
   edges: EdgeJson[] = [];
-  clusters: Graph[] = [];
 
-  constructor(commit: Commit) {
-    this.init(commit);
+  constructor(id: string, { nodes, edges }: Hierarchy) {
+    this.id = id;
+    this.edges = edges;
+
+    this.init(nodes);
   }
 
-  private init(commit: Commit) {
-    this.url = commit.url;
-    this.edges = commit.edges;
-    this.clusters = commit.clusters;
-
-    for (const node of commit.nodes) {
+  private init(nodes: UnifiedNodeJson[]) {
+    for (const node of nodes) {
       switch (node.nodeType) {
         case "BASE":
         case "LOCATION_CONTEXT":
@@ -81,13 +79,11 @@ export class NodesStore {
   };
 
   updateStorage = async () => {
-    const commit: Commit = {
-      url: this.url,
+    const hierarchy: Hierarchy = {
       nodes: this.getNodes().map((node) => node.stringify()),
       edges: this.edges,
-      clusters: this.clusters,
     };
 
-    await storage.setItem(StorageKey.getWithUrl(this.url), commit);
+    await storage.setItem(StorageKey.hierarchy(this.id), hierarchy);
   };
 }
