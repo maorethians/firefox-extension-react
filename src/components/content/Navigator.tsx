@@ -4,6 +4,7 @@ import { Button } from "@mui/material";
 import { SUBJECT_MESSAGE_TYPE } from "@/components/content/SubjectNode.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { getNodeColor } from "@/services/content/getNodeColor.ts";
+import { isAggregator } from "@/types";
 
 export const Navigator: React.FC<{
   nodeIds: string[];
@@ -14,9 +15,7 @@ export const Navigator: React.FC<{
     .filter(
       ({ node }) =>
         intersection(nodeIds, node.aggregatorIds).length > 0 &&
-        node.nodeType !== "SEMANTIC_CONTEXT" &&
-        node.nodeType !== "LOCATION_CONTEXT" &&
-        node.nodeType !== "EXTENSION",
+        isAggregator(node),
     );
 
   const nodes = nodeIds.map((id) => nodesStore.getNodeById(id));

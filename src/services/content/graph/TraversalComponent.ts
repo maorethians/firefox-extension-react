@@ -1,4 +1,4 @@
-import { ClusterJson, CommitJson, TraversalComponentJson } from "@/types";
+import { ClusterJson, RootJson, TraversalComponentJson } from "@/types";
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import React from "react";
@@ -6,9 +6,9 @@ import { compact } from "lodash";
 import { GroqClient } from "@/services/content/llm/GroqClient.ts";
 
 export class TraversalComponent extends BaseNode {
-  declare node: TraversalComponentJson | ClusterJson | CommitJson;
+  declare node: TraversalComponentJson | ClusterJson | RootJson;
 
-  constructor(node: TraversalComponentJson | ClusterJson | CommitJson) {
+  constructor(node: TraversalComponentJson | ClusterJson | RootJson) {
     super(node);
   }
 

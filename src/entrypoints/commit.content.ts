@@ -1,6 +1,9 @@
 import { UrlHelper } from "@/services/UrlHelper.ts";
-
-export const PREPARE_COMMIT_HIERARCHY_MESSAGE = "PrepareCommitHierarchy";
+import { prepareStorage } from "@/services/prepareStorage.ts";
+import { NodesStore } from "@/services/content/NodesStore.ts";
+import { addControlPanel } from "@/services/content/addControlPanel.ts";
+import { addSubjectVisualization } from "@/services/content/addSubjectVisualization.ts";
+import { HunkLinesHandler } from "@/services/content/HunkLinesHandler.ts";
 
 export default defineContentScript({
   // login is split and logout is merged
@@ -11,9 +14,14 @@ export default defineContentScript({
   main: async () => {
     const url = UrlHelper.purify(window.location.href);
 
-    browser.runtime.sendMessage({
-      action: PREPARE_COMMIT_HIERARCHY_MESSAGE,
-      url,
+    prepareStorage(url, async (hierarchy, _clusters) => {
+      const nodesStore = new NodesStore(UrlHelper.getId(url), hierarchy);
+
+      addControlPanel(url, nodesStore);
+      addSubjectVisualization(nodesStore);
+
+      const hunkLinesHandler = new HunkLinesHandler(url, nodesStore);
+      await hunkLinesHandler.init();
     });
   },
 });

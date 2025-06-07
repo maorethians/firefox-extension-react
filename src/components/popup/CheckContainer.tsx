@@ -14,7 +14,7 @@ export const CheckContainer: React.FC = () => {
 
   useEffect(() => {
     updateServiceStatus();
-    const interval = setInterval(updateServiceStatus, 5000);
+    const interval = setInterval(updateServiceStatus, 1000);
     return () => clearInterval(interval);
   }, []);
 

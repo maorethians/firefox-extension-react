@@ -11,7 +11,7 @@ export const getNodeColor = (node: { nodeType: NodeType }) => {
     case "EXTENSION":
       nodeColor = colors.NODE.EXTENSION;
       break;
-    case "COMMIT":
+    case "ROOT":
     case "CLUSTER":
     case "COMPONENT":
     case "SUCCESSIVE":

@@ -26,13 +26,10 @@ export class UrlHelper {
     }
 
     const match = url.match(
-      /^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/,
+      /https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/pull\/(\d+)/,
     );
-    return {
-      user: match![1],
-      repo: match![2],
-      id: match![3],
-    };
+    const [, user, repo, id] = match!;
+    return { user, repo, id };
   };
 
   static isCommit = (url: string) =>
@@ -44,7 +41,7 @@ export class UrlHelper {
     );
 
   static isPullRequest = (url: string) =>
-    /^https?:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+\/files$/.test(url);
+    /https:\/\/github\.com\/[^\/]+\/[^\/]+\/pull\/\d+/.test(url);
 
   getCommitSha = (url: string) => {
     const match = url.match(/\/(?:commit|commits)\/([a-f0-9]{7,40})/);

@@ -1,28 +1,36 @@
 import { Cluster, Hierarchy } from "@/types";
-import { UrlHelper } from "@/services/UrlHelper.ts";
+import { PREPARE_MESSAGE } from "@/entrypoints/background.ts";
 import { StorageKey } from "@/services/StorageKey.ts";
-import { PREPARE_MESSAGE, PREPARED_MESSAGE } from "@/entrypoints/background.ts";
+import { UrlHelper } from "@/services/UrlHelper.ts";
 
-export const prepareStorage = (
+export const prepareStorage = async (
   url: string,
-  onPrepare: (hierarchy: Hierarchy, clusters: Cluster[]) => void,
+  onPrepare: (hierarchy: Hierarchy, clusters: Cluster[]) => Promise<void>,
 ) => {
-  browser.runtime.sendMessage({
+  const [storageHierarchy, storageClusters] = await Promise.all([
+    storage.getItem(StorageKey.hierarchy(UrlHelper.getId(url))),
+    storage.getItem(StorageKey.clusters(UrlHelper.getId(url))),
+  ]);
+  if (storageHierarchy && storageClusters) {
+    return onPrepare(
+      storageHierarchy as Hierarchy,
+      storageClusters as Cluster[],
+    );
+  }
+
+  const response = await browser.runtime.sendMessage({
     action: PREPARE_MESSAGE,
     url,
   });
+  if (response && response.hierarchy && response.clusters) {
+    const { hierarchy, clusters } = response;
 
-  browser.runtime.onMessage.addListener(async (message) => {
-    if (message.action !== PREPARED_MESSAGE || message.url !== url) {
-      return;
-    }
-
-    const hierarchy = await storage.getItem(
+    await storage.setItem(
       StorageKey.hierarchy(UrlHelper.getId(url)),
+      hierarchy,
     );
-    const clusters = await storage.getItem(
-      StorageKey.clusters(UrlHelper.getId(url)),
-    );
-    onPrepare(hierarchy as Hierarchy, clusters as Cluster[]);
-  });
+    await storage.setItem(StorageKey.clusters(UrlHelper.getId(url)), clusters);
+
+    await onPrepare(hierarchy, clusters);
+  }
 };

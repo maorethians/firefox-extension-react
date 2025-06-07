@@ -4,16 +4,24 @@ import { NodeOverlay } from "@/components/content/NodeOverlay.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 
+const hexToRgba = (hex: string, alpha: number) => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 export const HunkLineWrapper: React.FC<{
   nodesStore: NodesStore;
   hunk: Hunk[];
   element: HTMLElement;
-}> = ({ nodesStore, hunk, element }) => {
+  strength: number;
+}> = ({ nodesStore, hunk, element, strength }) => {
   if (hunk.length === 0) {
     return;
   }
 
-  const color = colors.HUNK[hunk[0].node.nodeType];
+  const color = hexToRgba(colors.HUNK[hunk[0].node.nodeType], strength);
 
   const ref: RefObject<HTMLDivElement | null> = useRef(null);
   useEffect(() => {

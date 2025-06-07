@@ -11,13 +11,13 @@ export class Narrator {
   constructor(nodesStore: NodesStore) {
     this.nodesStore = nodesStore;
 
-    const commitNode = this.nodesStore.getNodeById("commit");
-    if (!commitNode) {
-      throw new Error("Could not find commit node");
+    const rootNode = this.nodesStore.getNodeById("root");
+    if (!rootNode) {
+      throw new Error("Could not find root node");
     }
 
     const visited: string[] = [],
-      stack = [commitNode.node.id];
+      stack = [rootNode.node.id];
     this.dfs(visited, stack);
 
     this.story = visited;

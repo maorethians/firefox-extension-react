@@ -9,16 +9,16 @@ export const SUBJECT_MESSAGE_TYPE = "SetSubjectNode";
 export const SubjectNode: React.FC<{
   nodesStore: NodesStore;
 }> = ({ nodesStore }) => {
-  const { node: commitNode } = nodesStore.getNodeById("commit");
-  if (!commitNode) {
+  const { node: rootNode } = nodesStore.getNodeById("root");
+  if (!rootNode) {
     return;
   }
 
   const [isProcessing, setProcessing] = React.useState(false);
-  const [subjectId, setSubjectId] = useState(commitNode.id);
-  const [subjectTitle, setSubjectTitle] = useState(commitNode.title);
+  const [subjectId, setSubjectId] = useState(rootNode.id);
+  const [subjectTitle, setSubjectTitle] = useState(rootNode.title);
   const [subjectDescription, setSubjectDescription] = useState(
-    commitNode.description,
+    rootNode.description,
   );
   const setSubject = (id: string) => {
     const newNode = nodesStore.getNodeById(id);
@@ -33,7 +33,6 @@ export const SubjectNode: React.FC<{
 
   const [isAdvanced, setAdvanced] = useState(false);
   const [isAgent, setAgent] = useState(true);
-  const [logsExpanded, setLogsExpanded] = useState(false);
 
   window.addEventListener("message", ({ data }: MessageEvent) => {
     if (data.type !== SUBJECT_MESSAGE_TYPE) {

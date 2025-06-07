@@ -14,7 +14,7 @@ export type NodeType =
   | TraversalComponentJson["nodeType"]
   | SingularPatternJson["nodeType"]
   | ClusterJson["nodeType"]
-  | CommitJson["nodeType"];
+  | RootJson["nodeType"];
 
 export type HunkJson = BaseNodeJson & {
   hunkId: string;
@@ -81,8 +81,8 @@ export type ClusterJson = BaseNodeJson & {
   nodeType: "CLUSTER";
 };
 
-export type CommitJson = BaseNodeJson & {
-  nodeType: "COMMIT";
+export type RootJson = BaseNodeJson & {
+  nodeType: "ROOT";
 };
 
 export type AggregatorJson =
@@ -91,7 +91,7 @@ export type AggregatorJson =
   | TraversalComponentJson
   | SingularPatternJson
   | ClusterJson
-  | CommitJson;
+  | RootJson;
 
 export type UnifiedNodeJson = HunkJson | AggregatorJson;
 

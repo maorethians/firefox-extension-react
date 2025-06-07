@@ -7,14 +7,15 @@ import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 import React from "react";
 import { StorageKey } from "@/services/StorageKey.ts";
+import { UrlHelper } from "@/services/UrlHelper.ts";
 
 export class NodesStore {
-  private readonly id: string;
+  private readonly url: string;
   private nodes: Record<string, BaseNode> = {};
   edges: EdgeJson[] = [];
 
-  constructor(id: string, { nodes, edges }: Hierarchy) {
-    this.id = id;
+  constructor(url: string, { nodes, edges }: Hierarchy) {
+    this.url = url;
     this.edges = edges;
 
     this.init(nodes);
@@ -40,7 +41,7 @@ export class NodesStore {
           break;
         case "COMPONENT":
         case "CLUSTER":
-        case "COMMIT":
+        case "ROOT":
           this.nodes[node.id] = new TraversalComponent(node);
       }
     }
@@ -84,6 +85,9 @@ export class NodesStore {
       edges: this.edges,
     };
 
-    await storage.setItem(StorageKey.hierarchy(this.id), hierarchy);
+    await storage.setItem(
+      StorageKey.hierarchy(UrlHelper.getId(this.url)),
+      hierarchy,
+    );
   };
 }
