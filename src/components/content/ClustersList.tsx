@@ -7,7 +7,6 @@ import { CLUSTER_MESSAGE } from "@/components/content/Graph.tsx";
 export const ClustersList: React.FC<{ clusters: Cluster[] }> = ({
   clusters,
 }) => {
-  console.log(clusters);
   return (
     <div
       style={{

@@ -64,11 +64,10 @@ export class ContainerClient {
     }
 
     if (UrlHelper.isPullRequest(url)) {
-      const { user, repo, id } = UrlHelper.disassemblePR(url);
       const { data: returnType } = await axios.get(
         await this.getUrl(`/${type}/pull-request`),
         {
-          params: { url: `https://github.com/${user}/${repo}`, id },
+          params: { url },
         },
       );
 

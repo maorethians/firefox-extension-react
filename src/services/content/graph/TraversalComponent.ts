@@ -46,7 +46,6 @@ export class TraversalComponent extends BaseNode {
           : "") +
         "\n---\n";
 
-      console.log(result);
       return result;
     },
   };

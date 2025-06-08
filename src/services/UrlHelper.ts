@@ -20,7 +20,7 @@ export class UrlHelper {
     return `${user}-${repo}-${id}`;
   };
 
-  static disassemblePR = (url: string) => {
+  private static disassemblePR = (url: string) => {
     if (!this.isPullRequest(url)) {
       throw new Error("url is not in the expected format");
     }

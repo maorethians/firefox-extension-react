@@ -11,7 +11,6 @@ export default defineContentScript({
   ],
   main: async () => {
     const url = UrlHelper.purify(window.location.href);
-    console.log(url);
 
     prepareStorage(url, async (hierarchy, _clusters) => {
       const nodesStore = new NodesStore(UrlHelper.getId(url), hierarchy);
