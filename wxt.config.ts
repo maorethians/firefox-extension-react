@@ -12,5 +12,6 @@ export default defineConfig({
         matches: [],
       },
     ],
+    host_permissions: ["http://localhost:8080/*"],
   },
 });

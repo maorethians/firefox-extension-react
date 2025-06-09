@@ -1,33 +1,17 @@
 import axios from "axios";
 import { Cluster, Hierarchy } from "@/types";
 import { UrlHelper } from "@/services/UrlHelper.ts";
-import { PORT_STORAGE_KEY } from "@/components/popup/Steps/LaunchService/DockerRun.tsx";
 
 export class ContainerClient {
   private static host = "localhost";
   private static port: string = "8080";
-  private static isDefaultPort = true;
 
-  private static async init() {
-    if (this.isDefaultPort) {
-      const port = await storage.getItem(PORT_STORAGE_KEY);
-      if (typeof port !== "string") {
-        return;
-      }
-
-      this.port = port;
-      this.isDefaultPort = false;
-    }
-  }
-
-  private static getUrl = async (endpoint: string) => {
-    await this.init();
-
+  private static getUrl = (endpoint: string) => {
     return `http://${this.host}:${this.port}/api${endpoint}`;
   };
 
   static check = async () => {
-    const url = await this.getUrl("/health");
+    const url = this.getUrl("/health");
     try {
       const res = await axios.get(url, { timeout: 200 });
       return res.status === 200;
@@ -55,7 +39,7 @@ export class ContainerClient {
 
     if (UrlHelper.isCommit(url) || UrlHelper.isPRCommit(url)) {
       const { data: returnType } = await axios.get(
-        await this.getUrl(`/${type}/commit`),
+        this.getUrl(`/${type}/commit`),
         {
           params: { url: url },
         },
@@ -65,7 +49,7 @@ export class ContainerClient {
 
     if (UrlHelper.isPullRequest(url)) {
       const { data: returnType } = await axios.get(
-        await this.getUrl(`/${type}/pull-request`),
+        this.getUrl(`/${type}/pull-request`),
         {
           params: { url },
         },
