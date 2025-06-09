@@ -4,8 +4,11 @@ import { getSubjectContainer } from "@/services/content/addSubjectVisualization/
 import { SubjectNode } from "@/components/content/SubjectNode.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 
-export const addSubjectVisualization = (nodesStore: NodesStore) => {
-  const subjectContainer = getSubjectContainer();
+export const addSubjectVisualization = (
+  url: string,
+  nodesStore: NodesStore,
+) => {
+  const subjectContainer = getSubjectContainer(url);
   if (!subjectContainer) {
     return;
   }

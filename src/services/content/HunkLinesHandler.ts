@@ -23,6 +23,7 @@ export class HunkLinesHandler {
   private fileDiffTable: Record<string, HTMLTableSectionElement> = {};
 
   private populateTableMap = {
+    // commit unified/split
     commit: () => {
       const diffContentParent = document.getElementById("diff-content-parent");
       if (!diffContentParent) {
@@ -77,6 +78,7 @@ export class HunkLinesHandler {
           .item(0);
       }
     },
+    // PR-PR commit unified/split
     pullRequest: async () => {
       const filesContainersParent = document.getElementById("files");
       if (!filesContainersParent) {
@@ -130,8 +132,6 @@ export class HunkLinesHandler {
     this.nodesStore = nodesStore;
   }
 
-  // TODO: PR-PR commit unified/split
-  // supports: commit unified/split
   async init() {
     if (UrlHelper.isCommit(this.url)) {
       this.populateTableMap.commit();

@@ -1,27 +1,27 @@
-import { PORT_STORAGE_KEY } from "@/components/popup/DockerRun.tsx";
 import axios from "axios";
 import { Cluster, Hierarchy } from "@/types";
 import { UrlHelper } from "@/services/UrlHelper.ts";
+import { PORT_STORAGE_KEY } from "@/components/popup/Steps/LaunchService/DockerRun.tsx";
 
 export class ContainerClient {
   private static host = "localhost";
-  private static port: string;
+  private static port: string = "8080";
+  private static isDefaultPort = true;
 
   private static async init() {
-    if (!this.port) {
+    if (this.isDefaultPort) {
       const port = await storage.getItem(PORT_STORAGE_KEY);
       if (typeof port !== "string") {
-        throw new Error("port is not saved");
+        return;
       }
 
       this.port = port;
+      this.isDefaultPort = false;
     }
   }
 
   private static getUrl = async (endpoint: string) => {
-    if (!this.port) {
-      await this.init();
-    }
+    await this.init();
 
     return `http://${this.host}:${this.port}/api${endpoint}`;
   };

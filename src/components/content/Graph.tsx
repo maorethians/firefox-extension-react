@@ -25,19 +25,21 @@ export const Graph: React.FC<{ hierarchy: Hierarchy; clusters: Cluster[] }> = ({
   const [nodes, setNodes] = useState([] as UnifiedNodeJson[]);
   const [edges, setEdges] = useState([] as EdgeJson[]);
 
-  window.addEventListener("message", ({ data }: MessageEvent) => {
-    if (data.type !== CLUSTER_MESSAGE) {
-      return;
-    }
+  useEffect(() => {
+    window.addEventListener("message", ({ data }: MessageEvent) => {
+      if (data.type !== CLUSTER_MESSAGE) {
+        return;
+      }
 
-    const { commit: c, clusterIndex } = data.data;
-    const graph = c
-      ? { nodes: hierarchy.nodes, edges: hierarchy.edges }
-      : clusters[clusterIndex];
+      const { commit: c, clusterIndex } = data.data;
+      const graph = c
+        ? { nodes: hierarchy.nodes, edges: hierarchy.edges }
+        : clusters[clusterIndex];
 
-    setNodes(graph.nodes);
-    setEdges(graph.edges);
-  });
+      setNodes(graph.nodes);
+      setEdges(graph.edges);
+    });
+  }, []);
 
   const graphNodes: cytoscape.CytoscapeOptions["elements"] = [];
   nodes.forEach((node) => {

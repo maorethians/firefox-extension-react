@@ -2,7 +2,6 @@ import { ContainerClient } from "@/services/ContainerClient.ts";
 
 export const OPEN_TAB_MESSAGE = "OpenTab";
 export const PREPARE_MESSAGE = "PrepareCommitClusters";
-export const PREPARED_MESSAGE = "PreparedCommitClusters";
 
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener((message) => {

@@ -34,14 +34,16 @@ export const SubjectNode: React.FC<{
   const [isAdvanced, setAdvanced] = useState(false);
   const [isAgent, setAgent] = useState(true);
 
-  window.addEventListener("message", ({ data }: MessageEvent) => {
-    if (data.type !== SUBJECT_MESSAGE_TYPE) {
-      return;
-    }
+  useEffect(() => {
+    window.addEventListener("message", ({ data }: MessageEvent) => {
+      if (data.type !== SUBJECT_MESSAGE_TYPE) {
+        return;
+      }
 
-    const { subjectId } = data.data;
-    setSubject(subjectId);
-  });
+      const { subjectId } = data.data;
+      setSubject(subjectId);
+    });
+  }, []);
 
   const [isHovered, setIsHovered] = useState(false);
 
