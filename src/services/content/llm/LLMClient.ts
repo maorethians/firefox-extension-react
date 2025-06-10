@@ -1,17 +1,15 @@
-import { ChatGroq } from "@langchain/groq";
-import { getGroqClient } from "@/services/content/llm/getGroqClient.ts";
+import { getLLMClient } from "@/services/content/llm/getLLMClient.ts";
 import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StructuredToolInterface } from "@langchain/core/tools";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import { LLMConfig, ModelProvider } from "@/services/content/llm/LLMConfig.ts";
 
-export class GroqClient {
-  model: ChatGroq;
+export class LLMClient {
+  model: BaseChatModel;
 
-  constructor(key: string) {
-    this.model = new ChatGroq({
-      model: "llama-3.3-70b-versatile",
-      apiKey: key,
-    });
+  constructor(modelProvider: ModelProvider, key: string) {
+    this.model = LLMConfig[modelProvider].client(key);
   }
 
   async generate(prompt: string): Promise<string | undefined> {
@@ -25,12 +23,12 @@ export class GroqClient {
   }
 
   static async generate(prompt: string): Promise<string | undefined> {
-    const groqClient = await getGroqClient();
-    if (!groqClient) {
+    const client = await getLLMClient();
+    if (!client) {
       return;
     }
 
-    return groqClient.generate(prompt);
+    return client.generate(prompt);
   }
 
   async stream(prompt: string, tools?: StructuredToolInterface[]) {
@@ -56,11 +54,11 @@ export class GroqClient {
   }
 
   static async stream(prompt: string, tools?: StructuredToolInterface[]) {
-    const groqClient = await getGroqClient();
-    if (!groqClient) {
+    const client = await getLLMClient();
+    if (!client) {
       return;
     }
 
-    return groqClient.stream(prompt, tools);
+    return client.stream(prompt, tools);
   }
 }

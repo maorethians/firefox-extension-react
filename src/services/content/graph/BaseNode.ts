@@ -1,6 +1,6 @@
 import { NodeType, UnifiedNodeJson } from "@/types";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { GroqClient } from "@/services/content/llm/GroqClient.ts";
+import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import React from "react";
 import { AIMessageChunk } from "@langchain/core/messages";
 import { IterableReadableStream } from "@@/node_modules/@langchain/core/dist/utils/stream";
@@ -88,7 +88,7 @@ export abstract class BaseNode {
       return;
     }
 
-    const generator = await GroqClient.stream(
+    const generator = await LLMClient.stream(
       this._basePromptTemplates.title(description),
     );
 

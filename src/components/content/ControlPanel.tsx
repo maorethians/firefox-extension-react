@@ -28,6 +28,7 @@ export const ControlPanel: React.FC<{
         return;
       }
 
+      // TODO: sometimes it does not refresh the control panel
       setNarrator(new Narrator(cachedNodesStore));
     });
   }, []);

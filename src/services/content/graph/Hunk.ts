@@ -2,7 +2,7 @@ import { HunkJson } from "@/types";
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { compact } from "lodash";
-import { GroqClient } from "@/services/content/llm/GroqClient.ts";
+import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import React from "react";
 
 export class Hunk extends BaseNode {
@@ -107,6 +107,10 @@ export class Hunk extends BaseNode {
     const contexts = this.getContexts(nodesStore).filter(
       (context) => context.nodeType === "LOCATION_CONTEXT",
     );
+    if (contexts.length === 0) {
+      return "";
+    }
+
     const reverseContexts = contexts.reverse();
     return reverseContexts
       .map((context) => (context as Hunk).node.content)
@@ -147,7 +151,7 @@ export class Hunk extends BaseNode {
     );
 
     const semanticContexts = this.getSemanticContexts(nodesStore);
-    const generator = await GroqClient.stream(
+    const generator = await LLMClient.stream(
       this.promptTemplates.description(aggregatorsDescription, nodesStore),
       options?.agent && semanticContexts.length > 0
         ? [

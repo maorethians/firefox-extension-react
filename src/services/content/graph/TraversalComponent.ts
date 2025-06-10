@@ -3,7 +3,7 @@ import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import React from "react";
 import { compact } from "lodash";
-import { GroqClient } from "@/services/content/llm/GroqClient.ts";
+import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 
 export class TraversalComponent extends BaseNode {
   declare node: TraversalComponentJson | ClusterJson | RootJson;
@@ -89,7 +89,7 @@ export class TraversalComponent extends BaseNode {
       return;
     }
 
-    const generator = await GroqClient.stream(
+    const generator = await LLMClient.stream(
       this.promptTemplates.description(childrenDescription),
     );
     await this.streamField("description", setProcessing, generator, set);

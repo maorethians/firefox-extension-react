@@ -2,7 +2,7 @@ import { SuccessivePatternJson } from "@/types";
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { last } from "lodash";
-import { GroqClient } from "@/services/content/llm/GroqClient.ts";
+import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 import React from "react";
 
@@ -94,7 +94,7 @@ export class SuccessivePattern extends BaseNode {
 
     const sequence = this.getSequence(nodesStore);
     const semanticContexts = sequence[0].getSemanticContexts(nodesStore);
-    const generator = await GroqClient.stream(
+    const generator = await LLMClient.stream(
       this.promptTemplates.description(
         this.getSequence(nodesStore),
         nodesStore,

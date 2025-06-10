@@ -2,7 +2,7 @@ import { isAggregator, isHunk, UsagePatternJson } from "@/types";
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
-import { GroqClient } from "@/services/content/llm/GroqClient.ts";
+import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import { compact, partition } from "lodash";
 import React from "react";
 
@@ -143,7 +143,7 @@ export class UsagePattern extends BaseNode {
       semanticContexts.push(semanticContextContent.join("\n---\n"));
     }
 
-    const generator = await GroqClient.stream(
+    const generator = await LLMClient.stream(
       this.promptTemplates.description(
         useHunks,
         usedHunks,
