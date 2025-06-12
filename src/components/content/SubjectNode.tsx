@@ -52,7 +52,7 @@ export const SubjectNode: React.FC<{
     <div
       ref={ref}
       style={{
-        backgroundColor: colors.PRIMARY,
+        backgroundColor: colors.DARK.PRIMARY,
         position: "relative",
       }}
       onMouseEnter={() => setIsHovered(true)}

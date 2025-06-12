@@ -6,9 +6,10 @@ import { AIMessageChunk } from "@langchain/core/messages";
 import { IterableReadableStream } from "@@/node_modules/@langchain/core/dist/utils/stream";
 import { ChainValues } from "@@/node_modules/@langchain/core/dist/utils/types";
 import { tool } from "@langchain/core/tools";
-import { store } from "@/services/content/llm/store.ts";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+
+export const store: Record<string, number> = {};
 
 export abstract class BaseNode {
   node: UnifiedNodeJson;

@@ -5,6 +5,7 @@ export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   srcDir: "src",
   manifest: {
+    name: "ChangeNarrator",
     permissions: ["storage", "tabs"],
     web_accessible_resources: [
       {

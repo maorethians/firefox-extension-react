@@ -12,7 +12,7 @@ export const NodeOverlay: React.FC<{
     <div
       style={{
         position: "absolute",
-        backgroundColor: colors.PRIMARY,
+        backgroundColor: colors.DARK.PRIMARY,
         zIndex: 999,
         whiteSpace: "nowrap",
         ...(style ?? {}),

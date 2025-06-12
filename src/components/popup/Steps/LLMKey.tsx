@@ -78,7 +78,7 @@ export const LLMKey: React.FC = () => {
         <TextField
           label="API Key"
           variant="filled"
-          style={{ backgroundColor: colors.SECONDARY }}
+          style={{ backgroundColor: colors.DARK.SECONDARY }}
           value={key}
           onChange={(e) => {
             setKey(e.target.value);

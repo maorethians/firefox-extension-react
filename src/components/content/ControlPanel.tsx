@@ -3,40 +3,26 @@ import { colors } from "@/public/colors.ts";
 import { Narrator } from "@/services/content/Narrator.ts";
 import { Button, CircularProgress } from "@mui/material";
 import { OPEN_TAB_MESSAGE } from "@/entrypoints/background.ts";
-import { getCachedNodesStore } from "@/services/content/getNodesStore.ts";
-
-export const NODES_STORE_CACHED_MESSAGE = "NodesStoreCached";
+import { useNodesStores } from "@/services/content/getNodesStore.ts";
 
 export const ControlPanel: React.FC<{
   url: string;
 }> = ({ url }) => {
   const [narrator, setNarrator] = React.useState<Narrator>();
 
+  const nodesStore = useNodesStores((state) => state.nodesStores[url]);
   useEffect(() => {
-    window.addEventListener("message", ({ data }: MessageEvent) => {
-      if (data.type !== NODES_STORE_CACHED_MESSAGE) {
-        return;
-      }
+    if (!nodesStore) {
+      return;
+    }
 
-      const { url: messageUrl } = data.data;
-      if (url !== messageUrl) {
-        return;
-      }
-
-      const cachedNodesStore = getCachedNodesStore(url);
-      if (!cachedNodesStore) {
-        return;
-      }
-
-      // TODO: sometimes it does not refresh the control panel
-      setNarrator(new Narrator(cachedNodesStore));
-    });
-  }, []);
+    setNarrator(new Narrator(nodesStore));
+  }, [nodesStore]);
 
   return (
     <div
       style={{
-        backgroundColor: colors.PRIMARY,
+        backgroundColor: colors.DARK.PRIMARY,
         display: "flex",
         justifyContent: "center",
       }}

@@ -10,7 +10,7 @@ export const ClustersList: React.FC<{ clusters: Cluster[] }> = ({
   return (
     <div
       style={{
-        backgroundColor: colors.PRIMARY,
+        backgroundColor: colors.DARK.PRIMARY,
       }}
     >
       <Button

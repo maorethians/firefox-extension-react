@@ -42,7 +42,7 @@ export const DockerRun: React.FC = () => {
         <TextField
           label="Github Token"
           variant="filled"
-          style={{ backgroundColor: colors.SECONDARY }}
+          style={{ backgroundColor: colors.DARK.SECONDARY }}
           value={githubToken}
           onChange={(e) => {
             setGithubToken(e.target.value);
@@ -54,7 +54,7 @@ export const DockerRun: React.FC = () => {
         <TextField
           label="Command"
           variant="filled"
-          style={{ backgroundColor: colors.SECONDARY }}
+          style={{ backgroundColor: colors.DARK.SECONDARY }}
           value={command}
           contentEditable={false}
           fullWidth

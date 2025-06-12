@@ -3,8 +3,8 @@ import { prepareStorage } from "@/services/prepareStorage.ts";
 import { addControlPanel } from "@/services/content/addControlPanel.ts";
 import { addSubjectVisualization } from "@/services/content/addSubjectVisualization.ts";
 import { HunkLinesHandler } from "@/services/content/HunkLinesHandler.ts";
-import { getNodesStore } from "@/services/content/getNodesStore.ts";
-import { NODES_STORE_CACHED_MESSAGE } from "@/components/content/ControlPanel.tsx";
+import { useNodesStores } from "@/services/content/getNodesStore.ts";
+import { NodesStore } from "@/services/content/NodesStore.ts";
 
 export const contentMain = () => {
   const url = UrlHelper.purify(window.location.href);
@@ -12,12 +12,8 @@ export const contentMain = () => {
   addControlPanel(url);
 
   prepareStorage(url, async (hierarchy, _clusters) => {
-    const nodesStore = getNodesStore(url, hierarchy);
-
-    window.postMessage({
-      type: NODES_STORE_CACHED_MESSAGE,
-      data: { url },
-    });
+    const nodesStore = new NodesStore(url, hierarchy);
+    useNodesStores.getState().setNodesStore(url, nodesStore);
 
     addSubjectVisualization(url, nodesStore);
 
