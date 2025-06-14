@@ -1,8 +1,9 @@
-import React, { RefObject } from "react";
+import React from "react";
 import { colors } from "@/public/colors.ts";
 import { NodeOverlay } from "@/components/content/NodeOverlay.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Button, Checkbox, FormControlLabel } from "@mui/material";
+import { useColorMode } from "@/services/content/useColorMode.ts";
 
 export const SUBJECT_MESSAGE_TYPE = "SetSubjectNode";
 
@@ -47,12 +48,12 @@ export const SubjectNode: React.FC<{
 
   const [isHovered, setIsHovered] = useState(false);
 
-  const ref: RefObject<HTMLDivElement | null> = useRef(null);
+  const colorMode = useColorMode((state) => state.colorMode);
+
   return (
     <div
-      ref={ref}
       style={{
-        backgroundColor: colors.DARK.PRIMARY,
+        backgroundColor: colors[colorMode].PRIMARY,
         position: "relative",
       }}
       onMouseEnter={() => setIsHovered(true)}

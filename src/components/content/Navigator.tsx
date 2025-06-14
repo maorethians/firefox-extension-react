@@ -3,8 +3,9 @@ import { intersection, uniq } from "lodash";
 import { Button } from "@mui/material";
 import { SUBJECT_MESSAGE_TYPE } from "@/components/content/SubjectNode.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { getNodeColor } from "@/services/content/getNodeColor.ts";
 import { isAggregator } from "@/types";
+import { useColorMode } from "@/services/content/useColorMode.ts";
+import { colors } from "@/public/colors.ts";
 
 export const Navigator: React.FC<{
   nodeIds: string[];
@@ -26,8 +27,12 @@ export const Navigator: React.FC<{
     .getNodes()
     .filter(({ node }) => parentIds.includes(node.id));
 
+  const colorMode = useColorMode((state) => state.colorMode);
+  const backgroundColor = colors.HUNK.AGGREGATOR[colorMode];
+  const color = colors.HUNK.AGGREGATOR[colorMode === "DARK" ? "LIGHT" : "DARK"];
+
   return (
-    <div>
+    <div style={{ color }}>
       {parents.length > 0 && (
         <div>
           <h3>Parents:</h3>
@@ -41,7 +46,7 @@ export const Navigator: React.FC<{
                     data: { subjectId: parent.node.id },
                   });
                 }}
-                sx={{ backgroundColor: getNodeColor(parent) }}
+                sx={{ backgroundColor: backgroundColor, color }}
               >
                 {parent.node.title ?? parent.node.id}
               </Button>
@@ -62,7 +67,7 @@ export const Navigator: React.FC<{
                     data: { subjectId: child.node.id },
                   });
                 }}
-                sx={{ backgroundColor: getNodeColor(child) }}
+                sx={{ backgroundColor: backgroundColor, color }}
               >
                 {child.node.title ?? child.node.id}
               </Button>

@@ -1,4 +1,4 @@
-import { EdgeJson, Hierarchy, UnifiedNodeJson } from "@/types";
+import { EdgeJson, Hierarchy, isAggregator, UnifiedNodeJson } from "@/types";
 import { SingularPattern } from "@/services/content/graph/SingularPattern.ts";
 import { UsagePattern } from "@/services/content/graph/UsagePattern.ts";
 import { SuccessivePattern } from "@/services/content/graph/SuccessivePattern.ts";
@@ -8,10 +8,12 @@ import { Hunk } from "@/services/content/graph/Hunk.ts";
 import React from "react";
 import { StorageKey } from "@/services/StorageKey.ts";
 import { UrlHelper } from "@/services/UrlHelper.ts";
+import { last, sum } from "lodash";
 
 export class NodesStore {
   private readonly url: string;
   private nodes: Record<string, BaseNode> = {};
+  private nodesBranches: Record<string, number> = {};
   edges: EdgeJson[] = [];
 
   constructor(url: string, { nodes, edges }: Hierarchy) {
@@ -45,6 +47,53 @@ export class NodesStore {
           this.nodes[node.id] = new TraversalComponent(node);
       }
     }
+
+    const stack = [this.getNodeById("root").node.id];
+    this.processNodesBranches(stack);
+  }
+
+  private processNodesBranches = (stack: string[]) => {
+    if (stack.length === 0) {
+      return;
+    }
+
+    const subjectId = last(stack)!;
+
+    if (this.nodesBranches[subjectId]) {
+      return;
+    }
+
+    const targetNodes = this.edges
+      .filter(
+        ({ type, sourceId }) => type === "EXPANSION" && sourceId === subjectId,
+      )
+      .map(({ targetId }) => this.getNodeById(targetId))
+      .filter(
+        ({ node }) =>
+          isAggregator(node) &&
+          !this.nodesBranches[node.id] &&
+          !stack.includes(node.id),
+      );
+
+    for (const targetNode of targetNodes) {
+      stack.push(targetNode.node.id);
+      this.processNodesBranches(stack);
+    }
+
+    if (targetNodes.length === 0) {
+      this.nodesBranches[subjectId] = 0;
+    } else {
+      const childrenBranches = sum(
+        targetNodes.map(({ node }) => this.nodesBranches[node.id]),
+      );
+      this.nodesBranches[subjectId] = childrenBranches + targetNodes.length;
+    }
+
+    stack.pop();
+  };
+
+  getNodeBranches(id: string) {
+    return this.nodesBranches[id];
   }
 
   getNodes() {

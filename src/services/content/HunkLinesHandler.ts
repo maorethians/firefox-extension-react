@@ -16,10 +16,16 @@ type Direction = "up" | "down";
 export class HunkLinesHandler {
   private readonly url: string;
   private readonly nodesStore: NodesStore;
-  private currentLines: {
-    line: Element;
-    placeholder: Element;
-  }[] = [];
+  private currentLines: Record<
+    string,
+    Record<
+      number,
+      {
+        line: Element;
+        placeholder: Element;
+      }
+    >
+  > = {};
   private fileDiffTable: Record<string, HTMLTableSectionElement> = {};
 
   private populateTableMap = {
@@ -164,11 +170,14 @@ export class HunkLinesHandler {
   }
 
   private revertCurrentLines() {
-    for (const { line, placeholder } of this.currentLines) {
+    const lines = Object.values(this.currentLines)
+      .map((hunkLines) => Object.values(hunkLines))
+      .flat();
+    for (const { line, placeholder } of lines) {
       placeholder.parentElement?.replaceChild(line, placeholder);
     }
 
-    this.currentLines = [];
+    this.currentLines = {};
   }
 
   private async injectSubjectLines(subjectNode: BaseNode) {
@@ -196,7 +205,10 @@ export class HunkLinesHandler {
   }
 
   private async injectHunkLines(hunk: Hunk[], strength: number) {
-    const { startLine, endLine, path } = hunk[0].node;
+    const { startLine, endLine, path, hunkId } = hunk[0].node;
+    if (this.currentLines[hunkId]) {
+      return;
+    }
 
     const { closestRow, closenessType } = this.getClosestRow(
       Array.from(this.fileDiffTable[path].children),
@@ -208,7 +220,7 @@ export class HunkLinesHandler {
       return;
     }
 
-    const lines: Element[] = [];
+    const lines: Record<number, Element> = {};
     const hunkLength = endLine - startLine + 1;
     let currentRow = closestRow;
     while (true) {
@@ -222,10 +234,10 @@ export class HunkLinesHandler {
         startLine <= rowInfo.rightLineNumber &&
         rowInfo.rightLineNumber <= endLine
       ) {
-        lines.push(rowInfo.right);
+        lines[rowInfo.rightLineNumber] = rowInfo.right;
       }
 
-      if (lines.length === hunkLength) {
+      if (Object.keys(lines).length === hunkLength) {
         break;
       }
 
@@ -240,11 +252,18 @@ export class HunkLinesHandler {
       currentRow = nextRow;
     }
 
-    if (lines.length === 0) {
+    if (Object.keys(lines).length === 0) {
       return;
     }
 
-    for (const line of lines) {
+    const linePlaceholder: Record<
+      number,
+      {
+        line: Element;
+        placeholder: Element;
+      }
+    > = {};
+    for (const [lineNumber, line] of Object.entries(lines)) {
       const component = React.createElement(HunkLineWrapper, {
         nodesStore: this.nodesStore,
         hunk,
@@ -257,8 +276,10 @@ export class HunkLinesHandler {
       const root = ReactDOM.createRoot(placeholder);
       root.render(component);
 
-      this.currentLines.push({ line, placeholder });
+      linePlaceholder[parseInt(lineNumber)] = { line, placeholder };
     }
+
+    this.currentLines[hunkId] = linePlaceholder;
   }
 
   private getDescendantHunks(subjectNode: BaseNode) {

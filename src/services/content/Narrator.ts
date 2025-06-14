@@ -2,13 +2,18 @@ import { last } from "lodash";
 import { SUBJECT_MESSAGE_TYPE } from "@/components/content/SubjectNode.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { isAggregator } from "@/types";
+import { Dispatch, SetStateAction } from "react";
 
 export class Narrator {
   nodesStore: NodesStore;
-  story: string[];
-  current: string | null = null;
+  private story: string[] = [];
+  private current: string | null = null;
 
-  constructor(nodesStore: NodesStore) {
+  constructor(
+    nodesStore: NodesStore,
+    setIsFirst: Dispatch<SetStateAction<boolean>>,
+    setIsLast: Dispatch<SetStateAction<boolean>>,
+  ) {
     this.nodesStore = nodesStore;
 
     const rootNode = this.nodesStore.getNodeById("root");
@@ -16,11 +21,8 @@ export class Narrator {
       throw new Error("Could not find root node");
     }
 
-    const visited: string[] = [],
-      stack = [rootNode.node.id];
-    this.dfs(visited, stack);
-
-    this.story = visited;
+    const stack = [rootNode.node.id];
+    this.dfs(stack);
 
     window.addEventListener("message", ({ data }: MessageEvent) => {
       if (data.type !== SUBJECT_MESSAGE_TYPE) {
@@ -29,42 +31,54 @@ export class Narrator {
 
       const { subjectId } = data.data;
       this.current = subjectId;
+      setIsFirst(this.isFirst());
+      setIsLast(this.isLast());
     });
   }
 
-  // TODO: prioritized dfs (starting from deeper levels of the graph)
-  private dfs = (visited: string[], stack: string[]) => {
+  private dfs = (stack: string[]) => {
     if (stack.length === 0) {
       return;
     }
 
     const subjectId = last(stack)!;
-    if (visited.includes(subjectId)) {
+    if (this.story.includes(subjectId)) {
       return;
     }
 
-    const subject = this.nodesStore.getNodeById(subjectId);
-
     const targetNodes = this.nodesStore.edges
       .filter(
-        ({ type, sourceId, targetId }) =>
-          type === "EXPANSION" &&
-          this.nodesStore.getNodeById(sourceId).node.id === subjectId,
+        ({ type, sourceId }) => type === "EXPANSION" && sourceId === subjectId,
       )
-      .map((edge) => this.nodesStore.getNodeById(edge.targetId))
-      .filter(
-        ({ node }) =>
-          isAggregator(node) &&
-          !visited.includes(node.id) &&
-          !stack.includes(node.id),
-      );
+      .map(({ targetId }) => this.nodesStore.getNodeById(targetId));
 
-    for (const targetNode of targetNodes) {
-      stack.push(targetNode.node.id);
-      this.dfs(visited, stack);
+    const aggregatorTargetNodes = targetNodes.filter(
+      ({ node }) =>
+        isAggregator(node) &&
+        !this.story.includes(node.id) &&
+        !stack.includes(node.id),
+    );
+    const depthSortedIds = aggregatorTargetNodes
+      .map(({ node }) => ({
+        id: node.id,
+        depth: this.nodesStore.getNodeBranches(node.id),
+      }))
+      .sort((a, b) => b.depth - a.depth)
+      .map(({ id }) => id);
+    for (const id of depthSortedIds) {
+      stack.push(id);
+      this.dfs(stack);
     }
 
-    visited.push(subject.node.id);
+    if (targetNodes.length === 1 && isAggregator(targetNodes[0].node)) {
+      const childId = targetNodes[0].node.id;
+      console.log(subjectId, childId);
+      this.story = this.story.filter((id) => id !== childId);
+    }
+
+    const subject = this.nodesStore.getNodeById(subjectId);
+    this.story.push(subject.node.id);
+
     stack.pop();
   };
 
@@ -73,16 +87,23 @@ export class Narrator {
   };
 
   previousChapter = () => {
-    const currentIndex = this.story.findIndex((id) => id === this.current);
+    const currentIndex = this.currentIndex();
     const previousIndex = Math.max(0, currentIndex - 1);
     this.postMessage(this.story[previousIndex]);
   };
 
   nextChapter = () => {
-    const currentIndex = this.story.findIndex((id) => id === this.current);
+    const currentIndex = this.currentIndex();
     const nextIndex = Math.min(this.story.length - 1, currentIndex + 1);
     this.postMessage(this.story[nextIndex]);
   };
+
+  currentIndex = () => {
+    return this.story.findIndex((id) => id === this.current);
+  };
+
+  isFirst = () => this.currentIndex() === 0;
+  isLast = () => this.currentIndex() === this.story.length - 1;
 
   private postMessage = (subjectId: string) => {
     window.postMessage({

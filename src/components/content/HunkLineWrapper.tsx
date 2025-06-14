@@ -3,6 +3,7 @@ import { colors } from "@/public/colors.ts";
 import { NodeOverlay } from "@/components/content/NodeOverlay.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
+import { useColorMode } from "@/services/content/useColorMode.ts";
 
 const hexToRgba = (hex: string, alpha: number) => {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -20,8 +21,12 @@ export const HunkLineWrapper: React.FC<{
   if (hunk.length === 0) {
     return;
   }
+  const colorMode = useColorMode((state) => state.colorMode);
 
-  const color = hexToRgba(colors.HUNK[hunk[0].node.nodeType], strength);
+  const color = hexToRgba(
+    colors.HUNK[hunk[0].node.nodeType][colorMode],
+    strength,
+  );
 
   const ref: RefObject<HTMLDivElement | null> = useRef(null);
   useEffect(() => {
@@ -30,6 +35,10 @@ export const HunkLineWrapper: React.FC<{
       ref.current.appendChild(element);
     }
   }, [element]);
+
+  useEffect(() => {
+    element.style.background = color;
+  }, [colorMode]);
 
   const [isHovered, setIsHovered] = useState(false);
   return (

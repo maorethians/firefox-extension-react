@@ -1,5 +1,3 @@
-import { createTheme } from "@mui/material";
-
 export const colors = {
   DARK: {
     PRIMARY: "#1A1730",
@@ -10,12 +8,12 @@ export const colors = {
     SECONDARY: "#1565C0",
   },
   HUNK: {
-    BASE: "#1f4972",
-    AGGREGATOR: "#2C2C2C",
-    LOCATION_CONTEXT: "#3E1F47",
-    SEMANTIC_CONTEXT: "#3E1F47",
-    EXTENSION: "#1F3E47",
-    HIGHLIGHT: "#4A0D0D",
+    BASE: { DARK: "#1f4972", LIGHT: "#D0E1F9" },
+    AGGREGATOR: { DARK: "#2C2C2C", LIGHT: "#E6E6E6" },
+    LOCATION_CONTEXT: { DARK: "#3E1F47", LIGHT: "#F0D9F5" },
+    SEMANTIC_CONTEXT: { DARK: "#3E1F47", LIGHT: "#F0D9F5" },
+    EXTENSION: { DARK: "#1F3E47", LIGHT: "#D3EEF2" },
+    HIGHLIGHT: { DARK: "#4A0D0D", LIGHT: "#FFD6D6" },
   },
   NODE: {
     BASE: "#2C2C2C",
@@ -32,14 +30,3 @@ export const colors = {
     EXPANSION: "#F4D03F",
   },
 };
-
-export const theme = createTheme({
-  palette: {
-    primary: {
-      main: colors.DARK.PRIMARY,
-    },
-    secondary: {
-      main: colors.DARK.SECONDARY,
-    },
-  },
-});
