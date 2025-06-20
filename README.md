@@ -1,3 +1,4 @@
-# WXT + React
+# Change Narrator
 
-This template should help get you started developing with React in WXT.
+Browser Extension for Change Narrator. You can find the core at https://github.com/maorethians/RefactoringMiner and
+its image at https://hub.docker.com/r/maorethians/change-narrator
