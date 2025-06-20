@@ -1,0 +1,9 @@
+.highlight-light {
+    background-color: #ffe2c1 !important;
+    transition: background-color 200ms ease;
+}
+
+.highlight-dark {
+    background-color: #b07d32 !important;
+    transition: background-color 200ms ease;
+}

@@ -1,14 +1,14 @@
-import { groupBy, intersection, uniq } from "lodash";
+import { groupBy, uniq } from "lodash";
 import ReactDOM from "react-dom/client";
 import React from "react";
 import BPromise from "bluebird";
 import { SUBJECT_MESSAGE_TYPE } from "@/components/content/SubjectNode.tsx";
 import { HunkLineWrapper } from "@/components/content/HunkLineWrapper.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 import { isHunk } from "@/types";
 import { UrlHelper } from "@/services/UrlHelper.ts";
+import { useColorMode } from "@/services/content/useColorMode.ts";
 
 type ClosenessType = "start" | "end";
 type Direction = "up" | "down";
@@ -27,6 +27,11 @@ export class HunkLinesHandler {
     >
   > = {};
   private fileDiffTable: Record<string, HTMLTableSectionElement> = {};
+  private fileDiffTableOrder: Record<string, number> = {};
+  private subjectId: string = "root";
+  private scrollLists: Record<string, { element: Element; hunkId: string }[]> =
+    {};
+  private scrollIndex = -1;
 
   private populateTableMap = {
     // commit unified/split
@@ -38,6 +43,7 @@ export class HunkLinesHandler {
 
       let fileDiffParent =
         diffContentParent?.firstElementChild?.firstElementChild;
+      let fileIndex = 0;
       while (true) {
         fileDiffParent = fileDiffParent?.nextElementSibling;
         if (!fileDiffParent) {
@@ -82,6 +88,7 @@ export class HunkLinesHandler {
         this.fileDiffTable[filePath] = diffTable
           .querySelectorAll("tbody")
           .item(0);
+        this.fileDiffTableOrder[filePath] = fileIndex++;
       }
     },
     // PR-PR commit unified/split
@@ -111,6 +118,7 @@ export class HunkLinesHandler {
       const files = filesContainers
         .map((container) => Array.from(container.children))
         .flat();
+      let fileIndex = 0;
       for (const file of files) {
         const filePath = file.getAttribute("data-file-path");
         if (!filePath) {
@@ -129,6 +137,7 @@ export class HunkLinesHandler {
         this.fileDiffTable[filePath] = diffTable
           .querySelectorAll("tbody")
           .item(0);
+        this.fileDiffTableOrder[filePath] = fileIndex++;
       }
     },
   };
@@ -151,7 +160,7 @@ export class HunkLinesHandler {
     if (!subjectNode) {
       return;
     }
-    await this.injectSubjectLines(subjectNode);
+    await this.injectSubjectLines();
 
     window.addEventListener("message", async ({ data }: MessageEvent) => {
       if (data.type !== SUBJECT_MESSAGE_TYPE) {
@@ -159,13 +168,10 @@ export class HunkLinesHandler {
       }
 
       const { subjectId } = data.data;
-      const requestedSubjectNode = this.nodesStore.getNodeById(subjectId);
-      if (!requestedSubjectNode) {
-        return;
-      }
+      this.subjectId = subjectId;
 
       this.revertCurrentLines();
-      await this.injectSubjectLines(requestedSubjectNode);
+      await this.injectSubjectLines();
     });
   }
 
@@ -180,12 +186,17 @@ export class HunkLinesHandler {
     this.currentLines = {};
   }
 
-  private async injectSubjectLines(subjectNode: BaseNode) {
-    const { firstGeneration, extendedGenerations } =
-      this.getDescendantHunks(subjectNode);
+  private async injectSubjectLines() {
+    const subjectNode = this.nodesStore.getNodeById(this.subjectId);
 
-    await this.injectGenerationLines(firstGeneration, 1);
-    await this.injectGenerationLines(extendedGenerations, 0.3);
+    const { firstGeneration, extendedGenerations } =
+      this.nodesStore.getDescendantHunks(subjectNode);
+
+    await this.injectGenerationLines(firstGeneration, 0.6);
+    await this.injectGenerationLines(extendedGenerations, 0.2);
+
+    this.updateScrollList();
+    this.scrollIndex = -1;
   }
 
   private async injectGenerationLines(generation: Hunk[], strength: number) {
@@ -269,6 +280,7 @@ export class HunkLinesHandler {
         hunk,
         element: line.cloneNode(true) as HTMLElement,
         strength,
+        hunkLinesHandler: this,
       });
 
       const placeholder = document.createElement("div");
@@ -280,37 +292,6 @@ export class HunkLinesHandler {
     }
 
     this.currentLines[hunkId] = linePlaceholder;
-  }
-
-  private getDescendantHunks(subjectNode: BaseNode) {
-    const firstGeneration: Hunk[] = [];
-    const extendedGenerations: Hunk[] = [];
-
-    let hopNodeIds = [subjectNode.node.id];
-    while (true) {
-      const hopChildrenNodes = this.nodesStore
-        .getNodes()
-        .filter(
-          ({ node }) => intersection(hopNodeIds, node.aggregatorIds).length > 0,
-        );
-
-      if (hopChildrenNodes.length == 0) {
-        break;
-      }
-
-      const hopChildrenHunks = hopChildrenNodes.filter(
-        ({ node }) => node.nodeType === "BASE" || node.nodeType === "EXTENSION",
-      ) as Hunk[];
-      if (firstGeneration.length === 0) {
-        firstGeneration.push(...hopChildrenHunks);
-      } else {
-        extendedGenerations.push(...hopChildrenHunks);
-      }
-
-      hopNodeIds = hopChildrenNodes.map(({ node }) => node.id);
-    }
-
-    return { firstGeneration, extendedGenerations };
   }
 
   private getRowInfo(row?: Element | null) {
@@ -416,4 +397,101 @@ export class HunkLinesHandler {
       ? currentRow.nextElementSibling
       : currentRow.nextElementSibling;
   }
+
+  private updateScrollList = () => {
+    const { firstGeneration } = this.nodesStore.getDescendantHunks(
+      this.nodesStore.getNodeById(this.subjectId),
+    );
+    const fileOrderedHunks = Object.entries(
+      groupBy(
+        firstGeneration.map((hunk) => ({
+          ...hunk,
+          fileOrder: this.fileDiffTableOrder[hunk.node.path],
+        })),
+        "fileOrder",
+      ),
+    );
+    const orderedHunks = fileOrderedHunks
+      .map(
+        ([fileOrder, hunks]) =>
+          [
+            parseInt(fileOrder),
+            hunks.sort((h1, h2) => h1.node.startLine - h2.node.startLine),
+          ] as const,
+      )
+      .sort((e1, e2) => e1[0] - e2[0])
+      .map(([_fileOrder, hunks]) => hunks)
+      .flat();
+    const orderedHunkIds = uniq(orderedHunks.map((hunk) => hunk.node.hunkId));
+
+    const scrollList = orderedHunkIds
+      .map((hunkId) =>
+        Object.entries(this.currentLines[hunkId]).map(
+          ([lineNumber, linePlaceholder]) => ({
+            lineNumber: parseInt(lineNumber),
+            placeholder: linePlaceholder.placeholder,
+            hunkId,
+          }),
+        ),
+      )
+      .map((numberElements) => {
+        let minIndex = 0;
+        let minNumber = numberElements[minIndex].lineNumber;
+        numberElements.forEach(({ lineNumber }, index) => {
+          if (lineNumber < minNumber) {
+            minNumber = lineNumber;
+            minIndex = index;
+          }
+        });
+
+        return {
+          element: numberElements[minIndex].placeholder,
+          hunkId: numberElements[minIndex].hunkId,
+        };
+      });
+
+    this.scrollLists[this.subjectId] = scrollList;
+
+    return scrollList;
+  };
+
+  scrollNext = () => {
+    const scrollList = this.scrollLists[this.subjectId];
+    this.scrollIndex = Math.min(scrollList.length - 1, this.scrollIndex + 1);
+
+    const { element, hunkId } = scrollList[this.scrollIndex];
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    this.highlightHunk(hunkId);
+  };
+
+  scrollPrevious = () => {
+    const scrollList = this.scrollLists[this.subjectId];
+    this.scrollIndex = Math.max(0, this.scrollIndex - 1);
+
+    const { element, hunkId } = scrollList[this.scrollIndex];
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    this.highlightHunk(hunkId);
+  };
+
+  highlightHunk = (hunkId: string) => {
+    const colorMode = useColorMode.getState().colorMode;
+    const classPostFix = colorMode.toLowerCase();
+
+    const linePlaceholders = this.currentLines[hunkId];
+    Object.values(linePlaceholders).forEach(({ placeholder }) => {
+      const children = Array.from(placeholder.children);
+
+      for (const child of children) {
+        child.classList.add(`highlight-${classPostFix}`);
+      }
+
+      setTimeout(() => {
+        for (const child of children) {
+          child.classList.remove(`highlight-${classPostFix}`);
+        }
+      }, 1200);
+    });
+  };
 }

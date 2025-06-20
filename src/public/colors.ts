@@ -13,7 +13,6 @@ export const colors = {
     LOCATION_CONTEXT: { DARK: "#3E1F47", LIGHT: "#F0D9F5" },
     SEMANTIC_CONTEXT: { DARK: "#3E1F47", LIGHT: "#F0D9F5" },
     EXTENSION: { DARK: "#1F3E47", LIGHT: "#D3EEF2" },
-    HIGHLIGHT: { DARK: "#4A0D0D", LIGHT: "#FFD6D6" },
   },
   NODE: {
     BASE: "#2C2C2C",

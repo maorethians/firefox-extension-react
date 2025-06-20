@@ -4,6 +4,7 @@ import { NodeOverlay } from "@/components/content/NodeOverlay.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 import { useColorMode } from "@/services/content/useColorMode.ts";
+import { HunkLinesHandler } from "@/services/content/HunkLinesHandler.ts";
 
 const hexToRgba = (hex: string, alpha: number) => {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -17,16 +18,16 @@ export const HunkLineWrapper: React.FC<{
   hunk: Hunk[];
   element: HTMLElement;
   strength: number;
-}> = ({ nodesStore, hunk, element, strength }) => {
+  hunkLinesHandler: HunkLinesHandler;
+}> = ({ nodesStore, hunk, element, strength, hunkLinesHandler }) => {
   if (hunk.length === 0) {
     return;
   }
+  const { nodeType, hunkId } = hunk[0].node;
+
   const colorMode = useColorMode((state) => state.colorMode);
 
-  const color = hexToRgba(
-    colors.HUNK[hunk[0].node.nodeType][colorMode],
-    strength,
-  );
+  const color = hexToRgba(colors.HUNK[nodeType][colorMode], strength);
 
   const ref: RefObject<HTMLDivElement | null> = useRef(null);
   useEffect(() => {
@@ -44,8 +45,15 @@ export const HunkLineWrapper: React.FC<{
   return (
     <div
       ref={ref}
-      style={{ backgroundColor: color, position: "relative" }}
-      onMouseEnter={() => setIsHovered(true)}
+      style={{
+        backgroundColor: color,
+        position: "relative",
+        transition: "background-color 200ms ease",
+      }}
+      onMouseEnter={() => {
+        setIsHovered(true);
+        hunkLinesHandler.highlightHunk(hunkId);
+      }}
       onMouseLeave={() => setIsHovered(false)}
     >
       {isHovered && (

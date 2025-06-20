@@ -5,6 +5,7 @@ import { addSubjectVisualization } from "@/services/content/addSubjectVisualizat
 import { HunkLinesHandler } from "@/services/content/HunkLinesHandler.ts";
 import { useNodesStores } from "@/services/content/useNodesStores.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
+import { useHunkLinesHandler } from "@/services/content/useHunkLinesHandler.ts";
 
 export const contentMain = () => {
   const url = UrlHelper.purify(window.location.href);
@@ -19,5 +20,6 @@ export const contentMain = () => {
 
     const hunkLinesHandler = new HunkLinesHandler(url, nodesStore);
     await hunkLinesHandler.init();
+    useHunkLinesHandler.getState().setHunkLinesHandler(hunkLinesHandler);
   });
 };

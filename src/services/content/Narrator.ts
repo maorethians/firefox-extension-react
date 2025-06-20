@@ -72,7 +72,6 @@ export class Narrator {
 
     if (targetNodes.length === 1 && isAggregator(targetNodes[0].node)) {
       const childId = targetNodes[0].node.id;
-      console.log(subjectId, childId);
       this.story = this.story.filter((id) => id !== childId);
     }
 

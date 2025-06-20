@@ -10,6 +10,7 @@ import {
   getColorMode,
 } from "@/services/content/getColorMode.ts";
 import { MUISwitch } from "@/components/content/ControlPanel/MUISwitch.tsx";
+import { useHunkLinesHandler } from "@/services/content/useHunkLinesHandler.ts";
 
 export const ControlPanel: React.FC<{
   url: string;
@@ -18,6 +19,7 @@ export const ControlPanel: React.FC<{
   const [isFirst, setIsFirst] = React.useState(true);
   const [isLast, setIsLast] = React.useState(true);
   const nodesStore = useNodesStores((state) => state.nodesStores[url]);
+
   useEffect(() => {
     if (!nodesStore) {
       return;
@@ -25,6 +27,10 @@ export const ControlPanel: React.FC<{
 
     setNarrator(new Narrator(nodesStore, setIsFirst, setIsLast));
   }, [nodesStore]);
+
+  const hunkLinesHandler = useHunkLinesHandler(
+    (state) => state.hunkLinesHandler,
+  );
 
   const colorMode = useColorMode((state) => state.colorMode);
   const setColorMode = useColorMode((state) => state.setColorMode);
@@ -50,7 +56,7 @@ export const ControlPanel: React.FC<{
         }}
       />
       {narrator ? (
-        <div>
+        <div style={{ display: "flex", flexDirection: "row" }}>
           <Button variant="contained" onClick={narrator.beginStory}>
             Begin
           </Button>
@@ -65,6 +71,19 @@ export const ControlPanel: React.FC<{
             disabled={isLast}
             variant="contained"
             onClick={narrator.nextChapter}
+          >
+            Next
+          </Button>
+          <div style={{ marginLeft: "10px" }}></div>
+          <Button
+            variant="contained"
+            onClick={() => hunkLinesHandler?.scrollPrevious()}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => hunkLinesHandler?.scrollNext()}
           >
             Next
           </Button>

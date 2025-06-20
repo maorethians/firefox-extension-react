@@ -8,12 +8,16 @@ import { Hunk } from "@/services/content/graph/Hunk.ts";
 import React from "react";
 import { StorageKey } from "@/services/StorageKey.ts";
 import { UrlHelper } from "@/services/UrlHelper.ts";
-import { last, sum } from "lodash";
+import { intersection, last, sum } from "lodash";
 
 export class NodesStore {
   private readonly url: string;
   private nodes: Record<string, BaseNode> = {};
   private nodesBranches: Record<string, number> = {};
+  private nodeDescendents: Record<
+    string,
+    { firstGeneration: Hunk[]; extendedGenerations: Hunk[] }
+  > = {};
   edges: EdgeJson[] = [];
 
   constructor(url: string, { nodes, edges }: Hierarchy) {
@@ -139,4 +143,40 @@ export class NodesStore {
       hierarchy,
     );
   };
+
+  getDescendantHunks(subjectNode: BaseNode) {
+    const subjectId = subjectNode.node.id;
+
+    if (this.nodeDescendents[subjectId]) {
+      return this.nodeDescendents[subjectId];
+    }
+
+    const firstGeneration: Hunk[] = [];
+    const extendedGenerations: Hunk[] = [];
+
+    let hopNodeIds = [subjectNode.node.id];
+    while (true) {
+      const hopChildrenNodes = this.getNodes().filter(
+        ({ node }) => intersection(hopNodeIds, node.aggregatorIds).length > 0,
+      );
+
+      if (hopChildrenNodes.length == 0) {
+        break;
+      }
+
+      const hopChildrenHunks = hopChildrenNodes.filter(
+        ({ node }) => node.nodeType === "BASE" || node.nodeType === "EXTENSION",
+      ) as Hunk[];
+      if (firstGeneration.length === 0) {
+        firstGeneration.push(...hopChildrenHunks);
+      } else {
+        extendedGenerations.push(...hopChildrenHunks);
+      }
+
+      hopNodeIds = hopChildrenNodes.map(({ node }) => node.id);
+    }
+
+    this.nodeDescendents[subjectId] = { firstGeneration, extendedGenerations };
+    return this.nodeDescendents[subjectId];
+  }
 }
