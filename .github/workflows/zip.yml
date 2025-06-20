@@ -24,6 +24,9 @@ jobs:
       - name: Build ZIP
         run: yarn zip
 
+      - name: Check ZIP file existence
+        run: ls -la .output  # Confirm .zip file is present [9]
+
       - name: Upload ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
