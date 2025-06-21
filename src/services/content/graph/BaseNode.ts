@@ -8,6 +8,7 @@ import { ChainValues } from "@@/node_modules/@langchain/core/dist/utils/types";
 import { tool } from "@langchain/core/tools";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import { useGenerationProcess } from "@/services/content/useGenerationProcess.ts";
 
 export const store: Record<string, number> = {};
 
@@ -65,7 +66,6 @@ export abstract class BaseNode {
 
   async describeNode(
     _nodesStore: NodesStore,
-    _setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     _set?: React.Dispatch<React.SetStateAction<string | undefined>>,
     _options?: {
       force?: boolean;
@@ -74,6 +74,21 @@ export abstract class BaseNode {
       agent?: boolean;
     },
   ): Promise<void> {}
+
+  async wrappedDescribeNode(
+    nodesStore: NodesStore,
+    set?: React.Dispatch<React.SetStateAction<string | undefined>>,
+    options?: {
+      force?: boolean;
+      advanced?: boolean;
+      entitle?: boolean;
+      agent?: boolean;
+    },
+  ) {
+    this.setGenerationProcess(true);
+    await this.describeNode(nodesStore, set, options);
+    this.setGenerationProcess(false);
+  }
 
   async entitle(
     set?: React.Dispatch<React.SetStateAction<string | undefined>>,
@@ -93,23 +108,27 @@ export abstract class BaseNode {
       this._basePromptTemplates.title(description),
     );
 
-    await this.streamField("title", () => {}, generator, set);
+    await this.streamField("title", generator, set);
   }
 
   stringify() {
     return this.node;
   }
 
+  setGenerationProcess = (processState: boolean) => {
+    useGenerationProcess
+      .getState()
+      .setGenerationProcess(this.node.id, processState);
+  };
+
   async streamField(
     fieldKey: "description" | "title",
-    setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     generator?:
       | ReadableStream<AIMessageChunk>
       | IterableReadableStream<ChainValues>,
     set?: React.Dispatch<React.SetStateAction<string | undefined>>,
   ) {
     if (!generator) {
-      setProcessing(false);
       return;
     }
 
@@ -118,8 +137,6 @@ export abstract class BaseNode {
 
     for await (const chunk of generator) {
       if (chunk.content || (chunk as ChainValues).output) {
-        setProcessing(false);
-
         let content = "";
         if (chunk.content) {
           content = chunk.content;

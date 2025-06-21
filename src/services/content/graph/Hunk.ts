@@ -119,7 +119,6 @@ export class Hunk extends BaseNode {
 
   describeNode = async (
     nodesStore: NodesStore,
-    setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     set?: React.Dispatch<React.SetStateAction<string | undefined>>,
     options?: {
       force?: boolean;
@@ -140,7 +139,7 @@ export class Hunk extends BaseNode {
       .filter((aggregator) => aggregator.nodeType !== "SINGULAR");
     // TODO: make it batch
     for (const aggregator of aggregators) {
-      await aggregator.describeNode(nodesStore, () => {}, undefined, {
+      await aggregator.wrappedDescribeNode(nodesStore, undefined, {
         force: options?.force,
         entitle: true,
         agent: options?.agent,
@@ -163,7 +162,7 @@ export class Hunk extends BaseNode {
           ]
         : undefined,
     );
-    await this.streamField("description", setProcessing, generator, set);
+    await this.streamField("description", generator, set);
 
     if (options?.entitle) {
       await this.entitle();

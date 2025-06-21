@@ -12,7 +12,6 @@ export class SingularPattern extends BaseNode {
 
   async describeNode(
     nodesStore: NodesStore,
-    setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     set?: React.Dispatch<React.SetStateAction<string | undefined>>,
     options?: {
       force?: boolean;
@@ -34,7 +33,7 @@ export class SingularPattern extends BaseNode {
     }
 
     const lead = nodesStore.getNodeById(leadEdge.targetId);
-    await lead.describeNode(nodesStore, setProcessing, set, {
+    await lead.wrappedDescribeNode(nodesStore, set, {
       force: options?.force,
       entitle: true,
     });

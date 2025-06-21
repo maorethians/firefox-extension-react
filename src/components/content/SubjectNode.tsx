@@ -2,8 +2,14 @@ import React from "react";
 import { colors } from "@/public/colors.ts";
 import { NodeOverlay } from "@/components/content/NodeOverlay.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { Button, Checkbox, FormControlLabel } from "@mui/material";
+import {
+  Button,
+  Checkbox,
+  CircularProgress,
+  FormControlLabel,
+} from "@mui/material";
 import { useColorMode } from "@/services/content/useColorMode.ts";
+import { useGenerationProcess } from "@/services/content/useGenerationProcess.ts";
 
 export const SUBJECT_MESSAGE_TYPE = "SetSubjectNode";
 
@@ -15,7 +21,22 @@ export const SubjectNode: React.FC<{
     return;
   }
 
-  const [isProcessing, setProcessing] = React.useState(false);
+  const generationProcess = useGenerationProcess(
+    (state) => state.generationProcess,
+  );
+  const inGenerationNodes = Object.values(generationProcess).filter(
+    (generation) => generation,
+  ).length;
+  const [maxGenerationNodes, setMaxGenerationNodes] = useState(0);
+  useEffect(() => {
+    if (maxGenerationNodes < inGenerationNodes) {
+      setMaxGenerationNodes(inGenerationNodes);
+    }
+    if (inGenerationNodes === 0) {
+      setMaxGenerationNodes(inGenerationNodes);
+    }
+  }, [inGenerationNodes]);
+
   const [subjectId, setSubjectId] = useState(rootNode.id);
   const [subjectTitle, setSubjectTitle] = useState(rootNode.title);
   const [subjectDescription, setSubjectDescription] = useState(
@@ -70,26 +91,31 @@ export const SubjectNode: React.FC<{
       {subjectTitle && <h4>{subjectId}</h4>}
       <h4>Description:</h4>
       <Button
-        loading={isProcessing}
+        loading={generationProcess[subjectId]}
         variant="contained"
         onClick={async () => {
-          setProcessing(true);
-
-          await nodesStore.describeNode(
-            subjectId,
-            setProcessing,
-            setSubjectDescription,
-            { force: true, advanced: isAdvanced, agent: isAgent },
-          );
+          await nodesStore.describeNode(subjectId, setSubjectDescription, {
+            force: true,
+            advanced: isAdvanced,
+            agent: isAgent,
+          });
           await nodesStore.entitleNode(subjectId, setSubjectTitle, true);
-
-          setProcessing(false);
 
           await nodesStore.updateStorage();
         }}
       >
         {subjectDescription ? "Regenerate" : "Generate"}
       </Button>
+
+      {maxGenerationNodes > 0 && (
+        <CircularProgress
+          variant="determinate"
+          value={
+            ((maxGenerationNodes - inGenerationNodes) / maxGenerationNodes) *
+            100
+          }
+        />
+      )}
 
       <FormControlLabel
         control={

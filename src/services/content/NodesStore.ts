@@ -110,7 +110,6 @@ export class NodesStore {
 
   describeNode = async (
     id: string,
-    setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     set: React.Dispatch<React.SetStateAction<string | undefined>>,
     options?: {
       force?: boolean;
@@ -120,7 +119,7 @@ export class NodesStore {
     },
   ) => {
     const node = this.getNodeById(id);
-    await node.describeNode(this, setProcessing, set, options);
+    await node.wrappedDescribeNode(this, set, options);
   };
 
   entitleNode = async (

@@ -76,7 +76,6 @@ export class UsagePattern extends BaseNode {
 
   async describeNode(
     nodesStore: NodesStore,
-    setProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     set?: React.Dispatch<React.SetStateAction<string | undefined>>,
     options?: {
       force?: boolean;
@@ -111,7 +110,7 @@ export class UsagePattern extends BaseNode {
     ) as [UsagePattern[], Hunk[]];
 
     for (const usagePattern of usedUsagePatterns) {
-      await usagePattern.describeNode(nodesStore, () => {}, undefined, {
+      await usagePattern.wrappedDescribeNode(nodesStore, undefined, {
         force: options?.force,
         entitle: true,
         agent: options?.agent,
@@ -154,7 +153,7 @@ export class UsagePattern extends BaseNode {
         ? [this.tools.description(semanticContexts)]
         : undefined,
     );
-    await this.streamField("description", setProcessing, generator, set);
+    await this.streamField("description", generator, set);
 
     if (options?.entitle) {
       await this.entitle();
