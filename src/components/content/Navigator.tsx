@@ -34,7 +34,6 @@ export const Navigator: React.FC<{
   const backgroundColor = colors.HUNK.AGGREGATOR[colorMode];
   const color = colors.HUNK.AGGREGATOR[colorMode === "DARK" ? "LIGHT" : "DARK"];
 
-  nodeIds.forEach((id) => console.log(nodesStore.getNodeById(id).node));
   const canGenerate = nodeIds.every((id) =>
     isHunk(nodesStore.getNodeById(id).node),
   );

@@ -1,7 +1,10 @@
 import { defineConfig } from "wxt";
+import svgr from "vite-plugin-svgr";
 
-// See https://wxt.dev/api/config.html
 export default defineConfig({
+  vite: () => ({
+    plugins: [svgr()],
+  }),
   modules: ["@wxt-dev/module-react", "@wxt-dev/auto-icons"],
   srcDir: "src",
   manifest: {

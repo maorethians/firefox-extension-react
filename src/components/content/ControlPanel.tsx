@@ -1,7 +1,8 @@
+// @ts-nocheck
 import React from "react";
 import { colors } from "@/public/colors.ts";
 import { Narrator } from "@/services/content/Narrator.ts";
-import { Button, CircularProgress } from "@mui/material";
+import { CircularProgress, IconButton } from "@mui/material";
 import { OPEN_TAB_MESSAGE } from "@/entrypoints/background.ts";
 import { useNodesStores } from "@/services/content/useNodesStores.ts";
 import { useColorMode } from "@/services/content/useColorMode.ts";
@@ -12,6 +13,11 @@ import {
 import { MUISwitch } from "@/components/content/ControlPanel/MUISwitch.tsx";
 import { useHunkLinesHandler } from "@/services/content/useHunkLinesHandler.ts";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
+import Hierarchy from "../../public/hierarchy.svg?react";
+import GoToStart from "../../public/goToStart.svg?react";
+import Previous from "../../public/previous.svg?react";
+import Next from "../../public/next.svg?react";
+import Scroll from "../../public/scroll.svg?react";
 
 export const ControlPanel: React.FC<{
   url: string;
@@ -47,13 +53,16 @@ export const ControlPanel: React.FC<{
   useEffect(() => {
     getColorMode().then((colorMode) => setColorMode(colorMode));
   }, []);
+  const color = colors.HUNK.AGGREGATOR[colorMode === "DARK" ? "LIGHT" : "DARK"];
 
   return (
     <div
       style={{
         backgroundColor: colors[colorMode].PRIMARY,
         display: "flex",
-        justifyContent: "center",
+        justifyContent: "space-between",
+        alignItems: "center",
+        height: "55px",
       }}
     >
       <MUISwitch
@@ -65,56 +74,75 @@ export const ControlPanel: React.FC<{
           await storage.setItem(COLOR_MODE_STORAGE_KEY, newColorMode);
         }}
       />
-      {narrator ? (
-        <div style={{ display: "flex", flexDirection: "row" }}>
-          <Button variant="contained" onClick={narrator.beginStory}>
-            Begin
-          </Button>
-          <Button
+
+      {narrator && (
+        <div style={{ height: "100%" }}>
+          <IconButton style={{ height: "100%" }} onClick={narrator.beginStory}>
+            <GoToStart
+              style={{
+                color,
+                width: "100%",
+                height: "100%",
+              }}
+            />
+          </IconButton>
+          <IconButton
             disabled={isFirst}
-            variant="contained"
+            style={{ height: "100%" }}
             onClick={narrator.previousChapter}
           >
-            Previous
-          </Button>
-          <Button
+            <Previous
+              style={{
+                color,
+                width: "100%",
+                height: "100%",
+              }}
+            />
+          </IconButton>
+          <IconButton
             disabled={isLast}
-            variant="contained"
+            style={{ height: "100%" }}
             onClick={narrator.nextChapter}
           >
-            Next
-          </Button>
-          <div style={{ marginLeft: "10px" }}></div>
-          <Button
-            variant="contained"
-            onClick={() => hunkLinesHandler?.scrollPrevious()}
+            <Next
+              style={{
+                color,
+                width: "100%",
+                height: "100%",
+              }}
+            />
+          </IconButton>
+          <IconButton
+            style={{ height: "100%" }}
+            onClick={hunkLinesHandler?.scroll}
           >
-            Previous
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => hunkLinesHandler?.scrollNext()}
-          >
-            Next
-          </Button>
-          <Button
-            variant="contained"
-            onClick={async () => {
-              const parameterizedUrl = `${browser.runtime.getURL("/graph.html")}?url=${url}`;
-              browser.runtime.sendMessage({
-                action: OPEN_TAB_MESSAGE,
-                url: parameterizedUrl,
-              });
-            }}
-          >
-            Graph
-          </Button>
-        </div>
-      ) : (
-        <div style={{ display: "flex" }}>
-          <CircularProgress />
+            <Scroll
+              style={{
+                color,
+                width: "100%",
+                height: "100%",
+              }}
+            />
+          </IconButton>
         </div>
       )}
+
+      {narrator && (
+        <IconButton
+          onClick={async () => {
+            const parameterizedUrl = `${browser.runtime.getURL("/graph.html")}?url=${url}`;
+            browser.runtime.sendMessage({
+              action: OPEN_TAB_MESSAGE,
+              url: parameterizedUrl,
+            });
+          }}
+          style={{ height: "100%" }}
+        >
+          <Hierarchy style={{ fill: color, width: "100%", height: "100%" }} />
+        </IconButton>
+      )}
+
+      {!narrator && <CircularProgress />}
     </div>
   );
 };

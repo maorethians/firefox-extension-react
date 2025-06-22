@@ -59,9 +59,8 @@ export const Generation: React.FC<{
 
   return (
     <div style={{ color }}>
-      <h3>{title ?? subjectId}</h3>
+      <h3>{title || subjectId}</h3>
       {title && <h5>{subjectId}</h5>}
-
       <Button
         loading={generationProcess[subjectId]}
         variant="contained"
@@ -76,7 +75,6 @@ export const Generation: React.FC<{
       >
         {description ? "Regenerate" : "Generate"}
       </Button>
-
       {maxGenerationNodes > 0 && (
         <CircularProgress
           variant="determinate"
@@ -86,7 +84,6 @@ export const Generation: React.FC<{
           }
         />
       )}
-
       <FormControlLabel
         control={
           <Checkbox
@@ -97,7 +94,6 @@ export const Generation: React.FC<{
         }
         label={"Advanced"}
       />
-
       <FormControlLabel
         control={
           <Checkbox
@@ -108,7 +104,6 @@ export const Generation: React.FC<{
         }
         label={"Agent"}
       />
-
       <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word" }}>
         {description}
       </pre>

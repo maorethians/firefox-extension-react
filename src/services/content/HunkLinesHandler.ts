@@ -197,7 +197,8 @@ export class HunkLinesHandler {
     await this.injectGenerationLines(extendedGenerations, 0.2);
 
     this.updateScrollList();
-    this.scrollIndex = -1;
+    this.scrollIndex =
+      this.scrollLists[useSubjectId.getState().subjectId].length - 1;
   }
 
   private async injectGenerationLines(generation: Hunk[], strength: number) {
@@ -456,19 +457,10 @@ export class HunkLinesHandler {
     return scrollList;
   };
 
-  scrollNext = () => {
+  scroll = () => {
     const scrollList = this.scrollLists[useSubjectId.getState().subjectId];
-    this.scrollIndex = Math.min(scrollList.length - 1, this.scrollIndex + 1);
-
-    const { element, hunkId } = scrollList[this.scrollIndex];
-    element.scrollIntoView({ behavior: "smooth", block: "center" });
-
-    this.highlightHunk(hunkId);
-  };
-
-  scrollPrevious = () => {
-    const scrollList = this.scrollLists[useSubjectId.getState().subjectId];
-    this.scrollIndex = Math.max(0, this.scrollIndex - 1);
+    this.scrollIndex =
+      this.scrollIndex === scrollList.length - 1 ? 0 : this.scrollIndex + 1;
 
     const { element, hunkId } = scrollList[this.scrollIndex];
     element.scrollIntoView({ behavior: "smooth", block: "center" });
