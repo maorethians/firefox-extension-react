@@ -1,11 +1,12 @@
 import React from "react";
 import { intersection, uniq } from "lodash";
 import { Button } from "@mui/material";
-import { SUBJECT_MESSAGE_TYPE } from "@/components/content/SubjectNode.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { isAggregator } from "@/types";
+import { isAggregator, isHunk } from "@/types";
 import { useColorMode } from "@/services/content/useColorMode.ts";
 import { colors } from "@/public/colors.ts";
+import { useSubjectId } from "@/services/content/useSubjectId.ts";
+import { Generation } from "@/components/content/Generation.tsx";
 
 export const Navigator: React.FC<{
   nodeIds: string[];
@@ -27,12 +28,23 @@ export const Navigator: React.FC<{
     .getNodes()
     .filter(({ node }) => parentIds.includes(node.id));
 
+  const setSubjectId = useSubjectId((state) => state.setSubjectId);
+
   const colorMode = useColorMode((state) => state.colorMode);
   const backgroundColor = colors.HUNK.AGGREGATOR[colorMode];
   const color = colors.HUNK.AGGREGATOR[colorMode === "DARK" ? "LIGHT" : "DARK"];
 
+  nodeIds.forEach((id) => console.log(nodesStore.getNodeById(id).node));
+  const canGenerate = nodeIds.every((id) =>
+    isHunk(nodesStore.getNodeById(id).node),
+  );
+
   return (
     <div style={{ color }}>
+      {canGenerate && (
+        <Generation subjectId={nodeIds[0]} nodesStore={nodesStore} />
+      )}
+
       {parents.length > 0 && (
         <div>
           <h3>Parents:</h3>
@@ -40,12 +52,7 @@ export const Navigator: React.FC<{
             {parents.map((parent) => (
               <Button
                 variant="contained"
-                onClick={() => {
-                  window.postMessage({
-                    type: SUBJECT_MESSAGE_TYPE,
-                    data: { subjectId: parent.node.id },
-                  });
-                }}
+                onClick={() => setSubjectId(parent.node.id)}
                 sx={{ backgroundColor: backgroundColor, color }}
               >
                 {parent.node.title ?? parent.node.id}
@@ -61,12 +68,7 @@ export const Navigator: React.FC<{
             {children.map((child) => (
               <Button
                 variant="contained"
-                onClick={() => {
-                  window.postMessage({
-                    type: SUBJECT_MESSAGE_TYPE,
-                    data: { subjectId: child.node.id },
-                  });
-                }}
+                onClick={() => setSubjectId(child.node.id)}
                 sx={{ backgroundColor: backgroundColor, color }}
               >
                 {child.node.title ?? child.node.id}

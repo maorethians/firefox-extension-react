@@ -3,7 +3,7 @@ import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { compact } from "lodash";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
-import React from "react";
+import { useAgentic } from "@/services/content/useAgentic.ts";
 
 export class Hunk extends BaseNode {
   declare node: HunkJson;
@@ -119,13 +119,9 @@ export class Hunk extends BaseNode {
 
   describeNode = async (
     nodesStore: NodesStore,
-    set?: React.Dispatch<React.SetStateAction<string | undefined>>,
     options?: {
       force?: boolean;
-      // Hunk is always advanced (its contribution to its pattern)
-      advanced?: boolean;
       entitle?: boolean;
-      agent?: boolean;
     },
   ): Promise<void> => {
     const descriptionCache = this.node.description;
@@ -139,10 +135,9 @@ export class Hunk extends BaseNode {
       .filter((aggregator) => aggregator.nodeType !== "SINGULAR");
     // TODO: make it batch
     for (const aggregator of aggregators) {
-      await aggregator.wrappedDescribeNode(nodesStore, undefined, {
+      await aggregator.wrappedDescribeNode(nodesStore, {
         force: options?.force,
         entitle: true,
-        agent: options?.agent,
       });
     }
     const aggregatorsDescription = compact(
@@ -152,7 +147,7 @@ export class Hunk extends BaseNode {
     const semanticContexts = this.getSemanticContexts(nodesStore);
     const generator = await LLMClient.stream(
       this.promptTemplates.description(aggregatorsDescription, nodesStore),
-      options?.agent && semanticContexts.length > 0
+      useAgentic.getState().isAgentic && semanticContexts.length > 0
         ? [
             this.tools.description(
               semanticContexts.map(
@@ -162,7 +157,7 @@ export class Hunk extends BaseNode {
           ]
         : undefined,
     );
-    await this.streamField("description", generator, set);
+    await this.streamField("description", generator);
 
     if (options?.entitle) {
       await this.entitle();

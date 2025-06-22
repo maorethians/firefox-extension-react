@@ -2,13 +2,16 @@ import { groupBy, uniq } from "lodash";
 import ReactDOM from "react-dom/client";
 import React from "react";
 import BPromise from "bluebird";
-import { SUBJECT_MESSAGE_TYPE } from "@/components/content/SubjectNode.tsx";
 import { HunkLineWrapper } from "@/components/content/HunkLineWrapper.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 import { isHunk } from "@/types";
 import { UrlHelper } from "@/services/UrlHelper.ts";
 import { useColorMode } from "@/services/content/useColorMode.ts";
+import {
+  SUBJECT_ID_MESSAGE,
+  useSubjectId,
+} from "@/services/content/useSubjectId.ts";
 
 type ClosenessType = "start" | "end";
 type Direction = "up" | "down";
@@ -28,7 +31,6 @@ export class HunkLinesHandler {
   > = {};
   private fileDiffTable: Record<string, HTMLTableSectionElement> = {};
   private fileDiffTableOrder: Record<string, number> = {};
-  private subjectId: string = "root";
   private scrollLists: Record<string, { element: Element; hunkId: string }[]> =
     {};
   private scrollIndex = -1;
@@ -163,12 +165,9 @@ export class HunkLinesHandler {
     await this.injectSubjectLines();
 
     window.addEventListener("message", async ({ data }: MessageEvent) => {
-      if (data.type !== SUBJECT_MESSAGE_TYPE) {
+      if (data.type !== SUBJECT_ID_MESSAGE) {
         return;
       }
-
-      const { subjectId } = data.data;
-      this.subjectId = subjectId;
 
       this.revertCurrentLines();
       await this.injectSubjectLines();
@@ -187,7 +186,9 @@ export class HunkLinesHandler {
   }
 
   private async injectSubjectLines() {
-    const subjectNode = this.nodesStore.getNodeById(this.subjectId);
+    const subjectNode = this.nodesStore.getNodeById(
+      useSubjectId.getState().subjectId,
+    );
 
     const { firstGeneration, extendedGenerations } =
       this.nodesStore.getDescendantHunks(subjectNode);
@@ -400,7 +401,7 @@ export class HunkLinesHandler {
 
   private updateScrollList = () => {
     const { firstGeneration } = this.nodesStore.getDescendantHunks(
-      this.nodesStore.getNodeById(this.subjectId),
+      this.nodesStore.getNodeById(useSubjectId.getState().subjectId),
     );
     const fileOrderedHunks = Object.entries(
       groupBy(
@@ -450,13 +451,13 @@ export class HunkLinesHandler {
         };
       });
 
-    this.scrollLists[this.subjectId] = scrollList;
+    this.scrollLists[useSubjectId.getState().subjectId] = scrollList;
 
     return scrollList;
   };
 
   scrollNext = () => {
-    const scrollList = this.scrollLists[this.subjectId];
+    const scrollList = this.scrollLists[useSubjectId.getState().subjectId];
     this.scrollIndex = Math.min(scrollList.length - 1, this.scrollIndex + 1);
 
     const { element, hunkId } = scrollList[this.scrollIndex];
@@ -466,7 +467,7 @@ export class HunkLinesHandler {
   };
 
   scrollPrevious = () => {
-    const scrollList = this.scrollLists[this.subjectId];
+    const scrollList = this.scrollLists[useSubjectId.getState().subjectId];
     this.scrollIndex = Math.max(0, this.scrollIndex - 1);
 
     const { element, hunkId } = scrollList[this.scrollIndex];

@@ -4,7 +4,7 @@ import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import { compact, partition } from "lodash";
-import React from "react";
+import { useAgentic } from "@/services/content/useAgentic.ts";
 
 export class UsagePattern extends BaseNode {
   declare node: UsagePatternJson;
@@ -76,12 +76,9 @@ export class UsagePattern extends BaseNode {
 
   async describeNode(
     nodesStore: NodesStore,
-    set?: React.Dispatch<React.SetStateAction<string | undefined>>,
     options?: {
       force?: boolean;
-      advanced?: boolean;
       entitle?: boolean;
-      agent?: boolean;
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
@@ -110,10 +107,9 @@ export class UsagePattern extends BaseNode {
     ) as [UsagePattern[], Hunk[]];
 
     for (const usagePattern of usedUsagePatterns) {
-      await usagePattern.wrappedDescribeNode(nodesStore, undefined, {
+      await usagePattern.wrappedDescribeNode(nodesStore, {
         force: options?.force,
         entitle: true,
-        agent: options?.agent,
       });
     }
     const usageDescriptions = compact(
@@ -149,11 +145,11 @@ export class UsagePattern extends BaseNode {
         usageDescriptions,
         nodesStore,
       ),
-      options?.agent && semanticContexts.length > 0
+      useAgentic.getState().isAgentic && semanticContexts.length > 0
         ? [this.tools.description(semanticContexts)]
         : undefined,
     );
-    await this.streamField("description", generator, set);
+    await this.streamField("description", generator);
 
     if (options?.entitle) {
       await this.entitle();

@@ -45,7 +45,7 @@ export const aggregatorNodeTypes = [
   "COMPONENT",
   "SINGULAR",
   "CLUSTER",
-  "COMMIT",
+  "ROOT",
 ];
 
 export const isAggregator = (node: BaseNodeJson): node is AggregatorJson => {

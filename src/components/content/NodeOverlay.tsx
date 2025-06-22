@@ -18,6 +18,10 @@ export const NodeOverlay: React.FC<{
         backgroundColor: colors[colorMode].PRIMARY,
         zIndex: 999,
         whiteSpace: "nowrap",
+        maxWidth: "500px",
+        maxHeight: "300px",
+        overflowY: "auto",
+        overflowX: "hidden",
         ...(style ?? {}),
       }}
     >

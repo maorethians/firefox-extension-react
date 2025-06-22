@@ -5,7 +5,6 @@ import { SuccessivePattern } from "@/services/content/graph/SuccessivePattern.ts
 import { TraversalComponent } from "@/services/content/graph/TraversalComponent.ts";
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
-import React from "react";
 import { StorageKey } from "@/services/StorageKey.ts";
 import { UrlHelper } from "@/services/UrlHelper.ts";
 import { intersection, last, sum } from "lodash";
@@ -110,25 +109,18 @@ export class NodesStore {
 
   describeNode = async (
     id: string,
-    set: React.Dispatch<React.SetStateAction<string | undefined>>,
     options?: {
       force?: boolean;
-      advanced?: boolean;
       entitle?: boolean;
-      agent?: boolean;
     },
   ) => {
     const node = this.getNodeById(id);
-    await node.wrappedDescribeNode(this, set, options);
+    await node.wrappedDescribeNode(this, options);
   };
 
-  entitleNode = async (
-    id: string,
-    set: React.Dispatch<React.SetStateAction<string | undefined>>,
-    force?: boolean,
-  ) => {
+  entitleNode = async (id: string, force?: boolean) => {
     const node = this.getNodeById(id);
-    await node.entitle(set, force);
+    await node.entitle(force);
   };
 
   updateStorage = async () => {

@@ -4,7 +4,7 @@ import { NodesStore } from "@/services/content/NodesStore.ts";
 import { last } from "lodash";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
-import React from "react";
+import { useAgentic } from "@/services/content/useAgentic.ts";
 
 export class SuccessivePattern extends BaseNode {
   declare node: SuccessivePatternJson;
@@ -78,12 +78,9 @@ export class SuccessivePattern extends BaseNode {
 
   async describeNode(
     nodesStore: NodesStore,
-    set?: React.Dispatch<React.SetStateAction<string | undefined>>,
     options?: {
       force?: boolean;
-      advanced?: boolean;
       entitle?: boolean;
-      agent?: boolean;
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
@@ -98,7 +95,7 @@ export class SuccessivePattern extends BaseNode {
         this.getSequence(nodesStore),
         nodesStore,
       ),
-      options?.agent && semanticContexts.length > 0
+      useAgentic.getState().isAgentic && semanticContexts.length > 0
         ? [
             this.tools.description(
               semanticContexts.map(
@@ -108,7 +105,7 @@ export class SuccessivePattern extends BaseNode {
           ]
         : undefined,
     );
-    await this.streamField("description", generator, set);
+    await this.streamField("description", generator);
 
     if (options?.entitle) {
       await this.entitle();

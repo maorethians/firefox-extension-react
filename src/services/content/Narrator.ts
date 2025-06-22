@@ -1,19 +1,13 @@
 import { last } from "lodash";
-import { SUBJECT_MESSAGE_TYPE } from "@/components/content/SubjectNode.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { isAggregator } from "@/types";
-import { Dispatch, SetStateAction } from "react";
+import { useSubjectId } from "@/services/content/useSubjectId.ts";
 
 export class Narrator {
   nodesStore: NodesStore;
   private story: string[] = [];
-  private current: string | null = null;
 
-  constructor(
-    nodesStore: NodesStore,
-    setIsFirst: Dispatch<SetStateAction<boolean>>,
-    setIsLast: Dispatch<SetStateAction<boolean>>,
-  ) {
+  constructor(nodesStore: NodesStore) {
     this.nodesStore = nodesStore;
 
     const rootNode = this.nodesStore.getNodeById("root");
@@ -23,17 +17,6 @@ export class Narrator {
 
     const stack = [rootNode.node.id];
     this.dfs(stack);
-
-    window.addEventListener("message", ({ data }: MessageEvent) => {
-      if (data.type !== SUBJECT_MESSAGE_TYPE) {
-        return;
-      }
-
-      const { subjectId } = data.data;
-      this.current = subjectId;
-      setIsFirst(this.isFirst());
-      setIsLast(this.isLast());
-    });
   }
 
   private dfs = (stack: string[]) => {
@@ -82,32 +65,24 @@ export class Narrator {
   };
 
   beginStory = () => {
-    this.postMessage(this.story[0]);
+    useSubjectId.getState().setSubjectId(this.story[0]);
   };
 
   previousChapter = () => {
     const currentIndex = this.currentIndex();
     const previousIndex = Math.max(0, currentIndex - 1);
-    this.postMessage(this.story[previousIndex]);
+    useSubjectId.getState().setSubjectId(this.story[previousIndex]);
   };
 
   nextChapter = () => {
     const currentIndex = this.currentIndex();
     const nextIndex = Math.min(this.story.length - 1, currentIndex + 1);
-    this.postMessage(this.story[nextIndex]);
+    useSubjectId.getState().setSubjectId(this.story[nextIndex]);
   };
 
-  currentIndex = () => {
-    return this.story.findIndex((id) => id === this.current);
-  };
+  currentIndex = () =>
+    this.story.findIndex((id) => id === useSubjectId.getState().subjectId);
 
   isFirst = () => this.currentIndex() === 0;
   isLast = () => this.currentIndex() === this.story.length - 1;
-
-  private postMessage = (subjectId: string) => {
-    window.postMessage({
-      type: SUBJECT_MESSAGE_TYPE,
-      data: { subjectId },
-    });
-  };
 }

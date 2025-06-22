@@ -1,9 +1,9 @@
 import { ClusterJson, RootJson, TraversalComponentJson } from "@/types";
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import React from "react";
 import { compact } from "lodash";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
+import { useDescription } from "@/services/content/useDescription.ts";
 
 export class TraversalComponent extends BaseNode {
   declare node: TraversalComponentJson | ClusterJson | RootJson;
@@ -52,12 +52,9 @@ export class TraversalComponent extends BaseNode {
 
   async describeNode(
     nodesStore: NodesStore,
-    set?: React.Dispatch<React.SetStateAction<string | undefined>>,
     options?: {
       force?: boolean;
-      advanced?: boolean;
       entitle?: boolean;
-      agent?: boolean;
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
@@ -71,10 +68,9 @@ export class TraversalComponent extends BaseNode {
       )
       .map((edge) => nodesStore.getNodeById(edge.targetId));
     for (const child of children) {
-      await child.wrappedDescribeNode(nodesStore, undefined, {
+      await child.wrappedDescribeNode(nodesStore, {
         force: options?.force,
         entitle: true,
-        agent: options?.agent,
       });
     }
     const childrenDescription = compact(
@@ -84,14 +80,16 @@ export class TraversalComponent extends BaseNode {
     if (childrenDescription.length === 1) {
       this.node.description = childrenDescription[0];
       this.node.title = children[0].node.title;
-      set?.(this.node.description);
+      useDescription
+        .getState()
+        .setDescription(this.node.id, this.node.description);
       return;
     }
 
     const generator = await LLMClient.stream(
       this.promptTemplates.description(childrenDescription),
     );
-    await this.streamField("description", generator, set);
+    await this.streamField("description", generator);
 
     if (options?.entitle) {
       await this.entitle();

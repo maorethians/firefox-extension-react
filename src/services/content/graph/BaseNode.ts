@@ -1,7 +1,6 @@
 import { NodeType, UnifiedNodeJson } from "@/types";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
-import React from "react";
 import { AIMessageChunk } from "@langchain/core/messages";
 import { IterableReadableStream } from "@@/node_modules/@langchain/core/dist/utils/stream";
 import { ChainValues } from "@@/node_modules/@langchain/core/dist/utils/types";
@@ -9,6 +8,8 @@ import { tool } from "@langchain/core/tools";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { useGenerationProcess } from "@/services/content/useGenerationProcess.ts";
+import { useDescription } from "@/services/content/useDescription.ts";
+import { useTitle } from "@/services/content/useTitle.ts";
 
 export const store: Record<string, number> = {};
 
@@ -66,34 +67,25 @@ export abstract class BaseNode {
 
   async describeNode(
     _nodesStore: NodesStore,
-    _set?: React.Dispatch<React.SetStateAction<string | undefined>>,
     _options?: {
       force?: boolean;
-      advanced?: boolean;
       entitle?: boolean;
-      agent?: boolean;
     },
   ): Promise<void> {}
 
   async wrappedDescribeNode(
     nodesStore: NodesStore,
-    set?: React.Dispatch<React.SetStateAction<string | undefined>>,
     options?: {
       force?: boolean;
-      advanced?: boolean;
       entitle?: boolean;
-      agent?: boolean;
     },
   ) {
     this.setGenerationProcess(true);
-    await this.describeNode(nodesStore, set, options);
+    await this.describeNode(nodesStore, options);
     this.setGenerationProcess(false);
   }
 
-  async entitle(
-    set?: React.Dispatch<React.SetStateAction<string | undefined>>,
-    force?: boolean,
-  ): Promise<void> {
+  async entitle(force?: boolean): Promise<void> {
     const titleCache = this.node.title;
     if (titleCache && !force) {
       return;
@@ -108,7 +100,7 @@ export abstract class BaseNode {
       this._basePromptTemplates.title(description),
     );
 
-    await this.streamField("title", generator, set);
+    await this.streamField("title", generator);
   }
 
   stringify() {
@@ -126,14 +118,22 @@ export abstract class BaseNode {
     generator?:
       | ReadableStream<AIMessageChunk>
       | IterableReadableStream<ChainValues>,
-    set?: React.Dispatch<React.SetStateAction<string | undefined>>,
   ) {
     if (!generator) {
       return;
     }
 
     this.node[fieldKey] = "";
-    set?.(this.node[fieldKey]);
+    let setter;
+    if (fieldKey === "description") {
+      setter = (description: string) =>
+        useDescription.getState().setDescription(this.node.id, description);
+    }
+    if (fieldKey === "title") {
+      setter = (title: string) =>
+        useTitle.getState().setTitle(this.node.id, title);
+    }
+    setter?.(this.node[fieldKey]);
 
     for await (const chunk of generator) {
       if (chunk.content || (chunk as ChainValues).output) {
@@ -145,7 +145,7 @@ export abstract class BaseNode {
         }
 
         this.node[fieldKey] += content;
-        set?.(this.node[fieldKey]);
+        setter?.(this.node[fieldKey]);
       }
     }
   }

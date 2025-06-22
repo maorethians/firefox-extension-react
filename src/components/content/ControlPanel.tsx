@@ -11,26 +11,36 @@ import {
 } from "@/services/content/getColorMode.ts";
 import { MUISwitch } from "@/components/content/ControlPanel/MUISwitch.tsx";
 import { useHunkLinesHandler } from "@/services/content/useHunkLinesHandler.ts";
+import { useSubjectId } from "@/services/content/useSubjectId.ts";
 
 export const ControlPanel: React.FC<{
   url: string;
 }> = ({ url }) => {
   const [narrator, setNarrator] = React.useState<Narrator>();
-  const [isFirst, setIsFirst] = React.useState(true);
-  const [isLast, setIsLast] = React.useState(true);
   const nodesStore = useNodesStores((state) => state.nodesStores[url]);
-
   useEffect(() => {
     if (!nodesStore) {
       return;
     }
 
-    setNarrator(new Narrator(nodesStore, setIsFirst, setIsLast));
+    setNarrator(new Narrator(nodesStore));
   }, [nodesStore]);
 
   const hunkLinesHandler = useHunkLinesHandler(
     (state) => state.hunkLinesHandler,
   );
+
+  const subjectId = useSubjectId((state) => state.subjectId);
+  const [isFirst, setFirst] = useState(false);
+  const [isLast, setLast] = useState(true);
+  useEffect(() => {
+    if (!narrator) {
+      return;
+    }
+
+    setFirst(narrator.isFirst());
+    setLast(narrator.isLast());
+  }, [subjectId]);
 
   const colorMode = useColorMode((state) => state.colorMode);
   const setColorMode = useColorMode((state) => state.setColorMode);

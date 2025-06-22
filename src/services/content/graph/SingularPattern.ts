@@ -1,7 +1,6 @@
 import { SingularPatternJson } from "@/types";
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import React from "react";
 
 export class SingularPattern extends BaseNode {
   declare node: SingularPatternJson;
@@ -12,12 +11,9 @@ export class SingularPattern extends BaseNode {
 
   async describeNode(
     nodesStore: NodesStore,
-    set?: React.Dispatch<React.SetStateAction<string | undefined>>,
     options?: {
       force?: boolean;
-      advanced?: boolean;
       entitle?: boolean;
-      agent?: boolean;
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
@@ -33,7 +29,7 @@ export class SingularPattern extends BaseNode {
     }
 
     const lead = nodesStore.getNodeById(leadEdge.targetId);
-    await lead.wrappedDescribeNode(nodesStore, set, {
+    await lead.wrappedDescribeNode(nodesStore, {
       force: options?.force,
       entitle: true,
     });
