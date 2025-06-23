@@ -5,13 +5,11 @@ import { NodesStore } from "@/services/content/NodesStore.ts";
 import { useColorMode } from "@/services/content/useColorMode.ts";
 import { Generation } from "@/components/content/Generation.tsx";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
-import { useTitle } from "@/services/content/useTitle.ts";
 
 export const SubjectNode: React.FC<{
   nodesStore: NodesStore;
 }> = ({ nodesStore }) => {
   const subjectId = useSubjectId((state) => state.subjectId);
-  const title = useTitle((state) => state.title[subjectId]);
 
   const [isHovered, setIsHovered] = useState(false);
 
@@ -22,6 +20,9 @@ export const SubjectNode: React.FC<{
       style={{
         backgroundColor: colors[colorMode].PRIMARY,
         position: "relative",
+        maxHeight: "300px",
+        overflowY: "auto",
+        overflowX: "hidden",
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -30,7 +31,7 @@ export const SubjectNode: React.FC<{
         <NodeOverlay
           nodesStore={nodesStore}
           nodeIds={[subjectId]}
-          style={{ left: 0, top: "100%" }}
+          style={{ right: 0, top: 0 }}
         />
       )}
       <Generation subjectId={subjectId} nodesStore={nodesStore} />

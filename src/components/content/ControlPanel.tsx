@@ -10,7 +10,7 @@ import {
   COLOR_MODE_STORAGE_KEY,
   getColorMode,
 } from "@/services/content/getColorMode.ts";
-import { MUISwitch } from "@/components/content/ControlPanel/MUISwitch.tsx";
+import { ColorModeSwitch } from "@/components/content/ControlPanel/ColorModeSwitch.tsx";
 import { useHunkLinesHandler } from "@/services/content/useHunkLinesHandler.ts";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
 import Hierarchy from "../../public/hierarchy.svg?react";
@@ -65,7 +65,7 @@ export const ControlPanel: React.FC<{
         height: "55px",
       }}
     >
-      <MUISwitch
+      <ColorModeSwitch
         checked={colorMode === "DARK"}
         onChange={async () => {
           const newColorMode = colorMode === "DARK" ? "LIGHT" : "DARK";
