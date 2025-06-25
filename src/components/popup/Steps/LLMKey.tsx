@@ -53,8 +53,10 @@ export const LLMKey: React.FC = () => {
   }, [modelProvider, key]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "row" }}>
-      <FormControl fullWidth={true}>
+    <div
+      style={{ display: "flex", flexDirection: "row", alignItems: "center" }}
+    >
+      <FormControl fullWidth={true} style={{ flex: 1 }}>
         <InputLabel>Model Provider</InputLabel>
         <Select
           variant={"standard"}
@@ -74,7 +76,7 @@ export const LLMKey: React.FC = () => {
         </Select>
       </FormControl>
 
-      <div>
+      <div style={{ flex: 2 }}>
         <TextField
           label="API Key"
           variant="filled"

@@ -1,7 +1,12 @@
 import React from "react";
-import { Button } from "@mui/material";
+import { Tab, Tabs } from "@mui/material";
 import { LaunchService } from "@/components/popup/Steps/LaunchService.tsx";
 import { LLMKey } from "@/components/popup/Steps/LLMKey.tsx";
+import { Box } from "@mui/system";
+// @ts-ignore
+import Container from "../../public/container.svg?react";
+// @ts-ignore
+import AiKey from "../../public/aiKey.svg?react";
 
 const steps = [LaunchService, LLMKey];
 
@@ -12,20 +17,30 @@ export const Steps: React.FC = () => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: "20px",
-        }}
-      >
-        <Button onClick={() => setStep(Math.max(step - 1, 0))}>Previous</Button>
-        <Button onClick={() => setStep(Math.min(step + 1, steps.length - 1))}>
-          Next
-        </Button>
-      </div>
+      <Box sx={{ width: "100%" }}>
+        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+          <Tabs
+            value={step}
+            onChange={(_event, newStep: number) => {
+              setStep(newStep);
+            }}
+            aria-label="basic tabs example"
+          >
+            <Tab
+              icon={<Container style={{ height: "25px" }} />}
+              style={{ flex: 1 }}
+            />
+            <Tab
+              icon={<AiKey style={{ height: "25px" }} />}
+              style={{ flex: 1 }}
+            />
+          </Tabs>
+        </Box>
+      </Box>
 
-      <StepComponent />
+      <div style={{ marginTop: "15px" }}>
+        <StepComponent />
+      </div>
     </div>
   );
 };

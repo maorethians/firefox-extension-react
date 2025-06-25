@@ -4,6 +4,7 @@ import { Steps } from "@/components/popup/Steps.tsx";
 // TODO: make Steps dynamic
 // TODO: UX overhaul
 // TODO: stuck generation
+// TODO: markup
 
 function App() {
   return (

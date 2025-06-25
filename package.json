@@ -17,6 +17,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@fontsource/roboto": "^5.2.6",
     "@langchain/core": "^0.3.44",
     "@langchain/groq": "^0.2.2",
     "@mui/material": "^7.0.2",

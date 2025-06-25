@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from "react";
 import { colors } from "@/public/colors.ts";
 import { Narrator } from "@/services/content/Narrator.ts";
@@ -13,10 +12,15 @@ import {
 import { ColorModeSwitch } from "@/components/content/ControlPanel/ColorModeSwitch.tsx";
 import { useHunkLinesHandler } from "@/services/content/useHunkLinesHandler.ts";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
+// @ts-ignore
 import Hierarchy from "../../public/hierarchy.svg?react";
+// @ts-ignore
 import GoToStart from "../../public/goToStart.svg?react";
+// @ts-ignore
 import Previous from "../../public/previous.svg?react";
+// @ts-ignore
 import Next from "../../public/next.svg?react";
+// @ts-ignore
 import Scroll from "../../public/scroll.svg?react";
 
 export const ControlPanel: React.FC<{
