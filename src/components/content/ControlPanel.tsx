@@ -146,7 +146,7 @@ export const ControlPanel: React.FC<{
         </IconButton>
       )}
 
-      {!narrator && <CircularProgress />}
+      {!narrator && <CircularProgress style={{ marginRight: "10px" }} />}
     </div>
   );
 };

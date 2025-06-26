@@ -81,7 +81,11 @@ export abstract class BaseNode {
     },
   ) {
     this.setGenerationProcess(true);
-    await this.describeNode(nodesStore, options);
+
+    try {
+      await this.describeNode(nodesStore, options);
+    } catch (e) {}
+
     this.setGenerationProcess(false);
   }
 
