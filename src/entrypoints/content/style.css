@@ -7,3 +7,9 @@
     background-color: #b07d32 !important;
     transition: background-color 200ms ease;
 }
+
+.generation {
+    white-space: wrap;
+    word-wrap: break-word;
+    padding: 20px;
+}

@@ -8,6 +8,7 @@ import { useAdvanced } from "@/services/content/useAdvanced.ts";
 import { useAgentic } from "@/services/content/useAgentic.ts";
 import { useDescription } from "@/services/content/useDescription.ts";
 import { useTitle } from "@/services/content/useTitle.ts";
+import ReactMarkdown from "react-markdown";
 // @ts-ignore
 import Generate from "../../public/generate.svg?react";
 // @ts-ignore
@@ -150,15 +151,7 @@ export const Generation: React.FC<{
           ))}
       </div>
 
-      <pre
-        style={{
-          whiteSpace: "pre-wrap",
-          wordWrap: "break-word",
-          padding: "8px",
-        }}
-      >
-        {description}
-      </pre>
+      <ReactMarkdown className={"generation"}>{description}</ReactMarkdown>
     </div>
   );
 };
