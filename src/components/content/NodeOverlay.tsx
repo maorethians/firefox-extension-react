@@ -3,6 +3,8 @@ import { colors } from "@/public/colors.ts";
 import { Navigator } from "@/components/content/Navigator.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { useColorMode } from "@/services/content/useColorMode.ts";
+import { Generation } from "@/components/content/Generation.tsx";
+import { isHunk } from "@/types";
 
 export const NodeOverlay: React.FC<{
   nodesStore: NodesStore;
@@ -10,6 +12,9 @@ export const NodeOverlay: React.FC<{
   style?: React.CSSProperties;
 }> = ({ nodesStore, nodeIds, style }) => {
   const colorMode = useColorMode((state) => state.colorMode);
+
+  const nodes = nodeIds.map((id) => nodesStore.getNodeById(id));
+  const canGenerate = nodes.every(({ node }) => isHunk(node));
 
   return (
     <div
@@ -25,7 +30,19 @@ export const NodeOverlay: React.FC<{
         ...(style ?? {}),
       }}
     >
-      <Navigator nodeIds={nodeIds} nodesStore={nodesStore} />
+      {canGenerate && (
+        <Generation subjectId={nodeIds[0]} nodesStore={nodesStore} />
+      )}
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        <Navigator nodeIds={nodeIds} nodesStore={nodesStore} />
+      </div>
     </div>
   );
 };

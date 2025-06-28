@@ -21,6 +21,7 @@ export const SubjectNode: React.FC<{
         backgroundColor: colors[colorMode].PRIMARY,
         position: "relative",
         maxHeight: "300px",
+        minHeight: "150px",
         overflowY: "auto",
         overflowX: "hidden",
       }}

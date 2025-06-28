@@ -151,7 +151,9 @@ export const Generation: React.FC<{
           ))}
       </div>
 
-      <ReactMarkdown className={"generation"}>{description}</ReactMarkdown>
+      {description && (
+        <ReactMarkdown className={"generation"}>{description}</ReactMarkdown>
+      )}
     </div>
   );
 };

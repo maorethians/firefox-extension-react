@@ -1,17 +1,30 @@
 import React from "react";
 import { intersection, uniq } from "lodash";
-import { Button } from "@mui/material";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { isAggregator, isHunk } from "@/types";
 import { useColorMode } from "@/services/content/useColorMode.ts";
 import { colors } from "@/public/colors.ts";
+import {
+  darkTheme,
+  GraphCanvas,
+  GraphEdge,
+  GraphNode,
+  lightTheme,
+} from "reagraph";
+import { nanoid } from "nanoid";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
-import { Generation } from "@/components/content/Generation.tsx";
 
 export const Navigator: React.FC<{
   nodeIds: string[];
   nodesStore: NodesStore;
 }> = ({ nodeIds, nodesStore }) => {
+  const setSubjectId = useSubjectId((state) => state.setSubjectId);
+
+  const colorMode = useColorMode((state) => state.colorMode);
+  const color = colors.HUNK.AGGREGATOR[colorMode === "DARK" ? "LIGHT" : "DARK"];
+
+  const nodes = nodeIds.map((id) => nodesStore.getNodeById(id));
+
   const children = nodesStore
     .getNodes()
     .filter(
@@ -20,7 +33,6 @@ export const Navigator: React.FC<{
         isAggregator(node),
     );
 
-  const nodes = nodeIds.map((id) => nodesStore.getNodeById(id));
   const parentIds = uniq(
     nodes.map(({ node }) => node.aggregatorIds ?? []).flat(),
   );
@@ -28,54 +40,66 @@ export const Navigator: React.FC<{
     .getNodes()
     .filter(({ node }) => parentIds.includes(node.id));
 
-  const setSubjectId = useSubjectId((state) => state.setSubjectId);
+  const graphNodes: GraphNode[] = [];
+  const graphEdges: GraphEdge[] = [];
 
-  const colorMode = useColorMode((state) => state.colorMode);
-  const backgroundColor = colors.HUNK.AGGREGATOR[colorMode];
-  const color = colors.HUNK.AGGREGATOR[colorMode === "DARK" ? "LIGHT" : "DARK"];
+  const subject = nodes[0];
+  graphNodes.push({
+    id: subject.node.id,
+    labelVisible: false,
+    fill: color,
+  });
 
-  const canGenerate = nodeIds.every((id) =>
-    isHunk(nodesStore.getNodeById(id).node),
-  );
+  parents.forEach((parent) => {
+    graphNodes.push({
+      id: parent.node.id,
+      label: parent.node.title ?? parent.node.id,
+    });
+    graphEdges.push({
+      id: nanoid(),
+      source: parent.node.id,
+      target: subject.node.id,
+    });
+  });
+
+  children.forEach((child) => {
+    graphNodes.push({
+      id: child.node.id,
+      label: child.node.title ?? child.node.id,
+    });
+    graphEdges.push({
+      id: nanoid(),
+      source: subject.node.id,
+      target: child.node.id,
+    });
+  });
 
   return (
-    <div style={{ color }}>
-      {canGenerate && (
-        <Generation subjectId={nodeIds[0]} nodesStore={nodesStore} />
-      )}
+    <div
+      style={{
+        position: "relative",
+        width: `150px`,
+        height: `150px`,
+        overflow: "hidden",
+        color,
+      }}
+    >
+      <GraphCanvas
+        nodes={graphNodes}
+        edges={graphEdges}
+        layoutType={"treeTd2d"}
+        theme={colorMode === "DARK" ? darkTheme : lightTheme}
+        minDistance={13}
+        maxDistance={650}
+        onNodeClick={({ id }) => {
+          const { node } = nodesStore.getNodeById(id);
+          if (isHunk(node)) {
+            return;
+          }
 
-      {parents.length > 0 && (
-        <div>
-          <h3>Parents:</h3>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {parents.map((parent) => (
-              <Button
-                variant="contained"
-                onClick={() => setSubjectId(parent.node.id)}
-                sx={{ backgroundColor: backgroundColor, color }}
-              >
-                {parent.node.title ?? parent.node.id}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-      {children.length > 0 && (
-        <div>
-          <h3>Explore:</h3>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {children.map((child) => (
-              <Button
-                variant="contained"
-                onClick={() => setSubjectId(child.node.id)}
-                sx={{ backgroundColor: backgroundColor, color }}
-              >
-                {child.node.title ?? child.node.id}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
+          setSubjectId(node.id);
+        }}
+      />
     </div>
   );
 };
