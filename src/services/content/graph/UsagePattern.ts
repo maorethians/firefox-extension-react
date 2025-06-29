@@ -78,7 +78,7 @@ export class UsagePattern extends BaseNode {
     nodesStore: NodesStore,
     options?: {
       force?: boolean;
-      entitle?: boolean;
+      parentsToSet?: string[];
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
@@ -109,7 +109,6 @@ export class UsagePattern extends BaseNode {
     for (const usagePattern of usedUsagePatterns) {
       await usagePattern.wrappedDescribeNode(nodesStore, {
         force: options?.force,
-        entitle: true,
       });
     }
     const usageDescriptions = compact(
@@ -149,10 +148,8 @@ export class UsagePattern extends BaseNode {
         ? [this.tools.description(semanticContexts)]
         : undefined,
     );
-    await this.streamField("description", generator);
+    await this.streamField("description", generator, options?.parentsToSet);
 
-    if (options?.entitle) {
-      await this.entitle();
-    }
+    await this.entitle();
   }
 }

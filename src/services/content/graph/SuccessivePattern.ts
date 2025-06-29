@@ -80,7 +80,7 @@ export class SuccessivePattern extends BaseNode {
     nodesStore: NodesStore,
     options?: {
       force?: boolean;
-      entitle?: boolean;
+      parentsToSet?: string[];
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
@@ -105,10 +105,8 @@ export class SuccessivePattern extends BaseNode {
           ]
         : undefined,
     );
-    await this.streamField("description", generator);
+    await this.streamField("description", generator, options?.parentsToSet);
 
-    if (options?.entitle) {
-      await this.entitle();
-    }
+    await this.entitle();
   }
 }

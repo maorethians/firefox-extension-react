@@ -13,7 +13,7 @@ export class SingularPattern extends BaseNode {
     nodesStore: NodesStore,
     options?: {
       force?: boolean;
-      entitle?: boolean;
+      parentsToSet?: string[];
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
@@ -31,12 +31,10 @@ export class SingularPattern extends BaseNode {
     const lead = nodesStore.getNodeById(leadEdge.targetId);
     await lead.wrappedDescribeNode(nodesStore, {
       force: options?.force,
-      entitle: true,
+      parentsToSet: [...(options?.parentsToSet ?? []), this.node.id],
     });
     this.node.description = lead.node.description;
 
-    if (options?.entitle) {
-      await this.entitle();
-    }
+    await this.entitle();
   }
 }

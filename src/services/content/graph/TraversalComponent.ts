@@ -1,9 +1,9 @@
 import { ClusterJson, RootJson, TraversalComponentJson } from "@/types";
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { compact } from "lodash";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import { useDescription } from "@/services/content/useDescription.ts";
+import { compact } from "lodash";
 
 export class TraversalComponent extends BaseNode {
   declare node: TraversalComponentJson | ClusterJson | RootJson;
@@ -54,7 +54,7 @@ export class TraversalComponent extends BaseNode {
     nodesStore: NodesStore,
     options?: {
       force?: boolean;
-      entitle?: boolean;
+      parentsToSet?: string[];
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
@@ -70,7 +70,10 @@ export class TraversalComponent extends BaseNode {
     for (const child of children) {
       await child.wrappedDescribeNode(nodesStore, {
         force: options?.force,
-        entitle: true,
+        parentsToSet:
+          children.length === 1
+            ? [...(options?.parentsToSet ?? []), this.node.id]
+            : options?.parentsToSet,
       });
     }
     const childrenDescription = compact(
@@ -89,10 +92,8 @@ export class TraversalComponent extends BaseNode {
     const generator = await LLMClient.stream(
       this.promptTemplates.description(childrenDescription),
     );
-    await this.streamField("description", generator);
+    await this.streamField("description", generator, options?.parentsToSet);
 
-    if (options?.entitle) {
-      await this.entitle();
-    }
+    await this.entitle();
   }
 }

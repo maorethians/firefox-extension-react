@@ -111,7 +111,6 @@ export class NodesStore {
     id: string,
     options?: {
       force?: boolean;
-      entitle?: boolean;
     },
   ) => {
     const node = this.getNodeById(id);

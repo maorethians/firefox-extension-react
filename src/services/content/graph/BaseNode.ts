@@ -69,7 +69,7 @@ export abstract class BaseNode {
     _nodesStore: NodesStore,
     _options?: {
       force?: boolean;
-      entitle?: boolean;
+      parentsToSet?: string[];
     },
   ): Promise<void> {}
 
@@ -77,7 +77,7 @@ export abstract class BaseNode {
     nodesStore: NodesStore,
     options?: {
       force?: boolean;
-      entitle?: boolean;
+      parentsToSet?: string[];
     },
   ) {
     this.setGenerationProcess(true);
@@ -122,6 +122,7 @@ export abstract class BaseNode {
     generator?:
       | ReadableStream<AIMessageChunk>
       | IterableReadableStream<ChainValues>,
+    parentsToSet?: string[],
   ) {
     if (!generator) {
       return;
@@ -130,12 +131,20 @@ export abstract class BaseNode {
     this.node[fieldKey] = "";
     let setter;
     if (fieldKey === "description") {
-      setter = (description: string) =>
+      setter = (description: string) => {
         useDescription.getState().setDescription(this.node.id, description);
+        parentsToSet?.forEach((nodeId) =>
+          useDescription.getState().setDescription(nodeId, description),
+        );
+      };
     }
     if (fieldKey === "title") {
-      setter = (title: string) =>
+      setter = (title: string) => {
         useTitle.getState().setTitle(this.node.id, title);
+        parentsToSet?.forEach((nodeId) =>
+          useTitle.getState().setTitle(nodeId, title),
+        );
+      };
     }
     setter?.(this.node[fieldKey]);
 

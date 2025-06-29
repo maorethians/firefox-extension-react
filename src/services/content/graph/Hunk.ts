@@ -1,9 +1,9 @@
 import { HunkJson } from "@/types";
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { compact } from "lodash";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import { useAgentic } from "@/services/content/useAgentic.ts";
+import { compact } from "lodash";
 
 export class Hunk extends BaseNode {
   declare node: HunkJson;
@@ -121,7 +121,7 @@ export class Hunk extends BaseNode {
     nodesStore: NodesStore,
     options?: {
       force?: boolean;
-      entitle?: boolean;
+      parentsToSet?: string[];
     },
   ): Promise<void> => {
     const descriptionCache = this.node.description;
@@ -137,7 +137,6 @@ export class Hunk extends BaseNode {
     for (const aggregator of aggregators) {
       await aggregator.wrappedDescribeNode(nodesStore, {
         force: options?.force,
-        entitle: true,
       });
     }
     const aggregatorsDescription = compact(
@@ -157,10 +156,8 @@ export class Hunk extends BaseNode {
           ]
         : undefined,
     );
-    await this.streamField("description", generator);
+    await this.streamField("description", generator, options?.parentsToSet);
 
-    if (options?.entitle) {
-      await this.entitle();
-    }
+    await this.entitle();
   };
 }
