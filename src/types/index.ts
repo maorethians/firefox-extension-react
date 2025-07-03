@@ -20,9 +20,17 @@ export type HunkJson = BaseNodeJson & {
   hunkId: string;
   path: string;
   content: string;
-  srcs: string[];
+  srcs?: string[];
+  dsts?: {
+    startLine: number;
+    startLineOffset: number;
+    endLine: number;
+    endLineOffset: number;
+  }[];
   startLine: number;
+  startLineOffset: number;
   endLine: number;
+  endLineOffset: number;
   nodeType: "BASE" | "LOCATION_CONTEXT" | "SEMANTIC_CONTEXT" | "EXTENSION";
 };
 

@@ -26,7 +26,6 @@ export const HunkLineWrapper: React.FC<{
   const { nodeType, hunkId } = hunk[0].node;
 
   const colorMode = useColorMode((state) => state.colorMode);
-
   const color = hexToRgba(colors.HUNK[nodeType][colorMode], strength);
 
   const ref: RefObject<HTMLDivElement | null> = useRef(null);
@@ -43,7 +42,7 @@ export const HunkLineWrapper: React.FC<{
 
   const [isHovered, setIsHovered] = useState(false);
   return (
-    <div
+    <span
       ref={ref}
       style={{
         backgroundColor: color,
@@ -63,6 +62,6 @@ export const HunkLineWrapper: React.FC<{
           style={{ top: 0, right: "100%" }}
         />
       )}
-    </div>
+    </span>
   );
 };

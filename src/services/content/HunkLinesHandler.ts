@@ -19,14 +19,14 @@ type Direction = "up" | "down";
 export class HunkLinesHandler {
   private readonly url: string;
   private readonly nodesStore: NodesStore;
-  private currentLines: Record<
+  private activeHunksLines: Record<
     string,
     Record<
       number,
       {
-        line: Element;
+        element: Element;
         placeholder: Element;
-      }
+      }[]
     >
   > = {};
   private fileDiffTable: Record<string, HTMLTableSectionElement> = {};
@@ -175,14 +175,15 @@ export class HunkLinesHandler {
   }
 
   private revertCurrentLines() {
-    const lines = Object.values(this.currentLines)
+    const lines = Object.values(this.activeHunksLines)
       .map((hunkLines) => Object.values(hunkLines))
+      .flat()
       .flat();
-    for (const { line, placeholder } of lines) {
-      placeholder.parentElement?.replaceChild(line, placeholder);
+    for (const { element, placeholder } of lines) {
+      placeholder.parentElement?.replaceChild(element, placeholder);
     }
 
-    this.currentLines = {};
+    this.activeHunksLines = {};
   }
 
   private async injectSubjectLines() {
@@ -194,7 +195,7 @@ export class HunkLinesHandler {
       this.nodesStore.getDescendantHunks(subjectNode);
 
     await this.injectGenerationLines(firstGeneration, 0.6);
-    await this.injectGenerationLines(extendedGenerations, 0.2);
+    await this.injectGenerationLines(extendedGenerations, 0.3);
 
     this.updateScrollList();
     this.scrollIndex =
@@ -218,8 +219,16 @@ export class HunkLinesHandler {
   }
 
   private async injectHunkLines(hunk: Hunk[], strength: number) {
-    const { startLine, endLine, path, hunkId } = hunk[0].node;
-    if (this.currentLines[hunkId]) {
+    const {
+      startLine,
+      startLineOffset,
+      endLine,
+      endLineOffset,
+      path,
+      hunkId,
+      dsts,
+    } = hunk[0].node;
+    if (this.activeHunksLines[hunkId]) {
       return;
     }
 
@@ -272,28 +281,88 @@ export class HunkLinesHandler {
     const linePlaceholder: Record<
       number,
       {
-        line: Element;
+        element: Element;
         placeholder: Element;
-      }
+      }[]
     > = {};
-    for (const [lineNumber, line] of Object.entries(lines)) {
-      const component = React.createElement(HunkLineWrapper, {
-        nodesStore: this.nodesStore,
-        hunk,
-        element: line.cloneNode(true) as HTMLElement,
-        strength,
-        hunkLinesHandler: this,
-      });
+    for (const [lineNumberStr, line] of Object.entries(lines)) {
+      const lineNumber = parseInt(lineNumberStr);
 
-      const placeholder = document.createElement("div");
-      line.parentElement?.replaceChild(placeholder, line);
-      const root = ReactDOM.createRoot(placeholder);
-      root.render(component);
+      const codeLine = line.querySelector("code");
+      if (!codeLine) {
+        continue;
+      }
 
-      linePlaceholder[parseInt(lineNumber)] = { line, placeholder };
+      const innerText = codeLine
+        .getElementsByClassName("diff-text-inner")
+        .item(0);
+      if (!innerText) {
+        continue;
+      }
+
+      // wrap any text with span
+      let currentChild = innerText.firstChild;
+      while (currentChild) {
+        if (currentChild.nodeType === Node.TEXT_NODE) {
+          const wrapper = document.createElement("span");
+          wrapper.textContent = currentChild.textContent;
+          innerText.replaceChild(wrapper, currentChild);
+
+          currentChild = wrapper;
+        }
+
+        currentChild = currentChild.nextSibling;
+      }
+
+      linePlaceholder[lineNumber] = [];
+
+      currentChild = innerText.firstChild;
+      let lineOffset = 0;
+      while (currentChild) {
+        const childElement = currentChild as HTMLElement;
+
+        const isInHunk = this.isInRange(
+          { lineNumber, lineOffset },
+          {
+            startLine,
+            startLineOffset,
+            endLine,
+            endLineOffset,
+          },
+        );
+        const isException = dsts?.some((dst) =>
+          this.isInRange({ lineNumber, lineOffset }, dst),
+        );
+
+        if (isInHunk && !isException) {
+          const component = React.createElement(HunkLineWrapper, {
+            nodesStore: this.nodesStore,
+            hunk,
+            element: childElement.cloneNode(true) as HTMLElement,
+            strength,
+            hunkLinesHandler: this,
+          });
+          const placeholder = document.createElement("span");
+          childElement.parentElement?.replaceChild(placeholder, childElement);
+          const root = ReactDOM.createRoot(placeholder);
+          root.render(component);
+
+          linePlaceholder[lineNumber].push({
+            element: childElement,
+            placeholder,
+          });
+
+          currentChild = placeholder;
+        }
+
+        currentChild = currentChild.nextSibling;
+
+        const childContent = childElement.innerText;
+        lineOffset += childContent.length;
+      }
     }
 
-    this.currentLines[hunkId] = linePlaceholder;
+    this.activeHunksLines[hunkId] = linePlaceholder;
   }
 
   private getRowInfo(row?: Element | null) {
@@ -428,10 +497,10 @@ export class HunkLinesHandler {
 
     const scrollList = orderedHunkIds
       .map((hunkId) =>
-        Object.entries(this.currentLines[hunkId]).map(
-          ([lineNumber, linePlaceholder]) => ({
+        Object.entries(this.activeHunksLines[hunkId]).map(
+          ([lineNumber, line]) => ({
             lineNumber: parseInt(lineNumber),
-            placeholder: linePlaceholder.placeholder,
+            placeholders: line.map(({ placeholder }) => placeholder),
             hunkId,
           }),
         ),
@@ -447,7 +516,7 @@ export class HunkLinesHandler {
         });
 
         return {
-          element: numberElements[minIndex].placeholder,
+          element: numberElements[minIndex].placeholders[0],
           hunkId: numberElements[minIndex].hunkId,
         };
       });
@@ -472,19 +541,44 @@ export class HunkLinesHandler {
     const colorMode = useColorMode.getState().colorMode;
     const classPostFix = colorMode.toLowerCase();
 
-    const linePlaceholders = this.currentLines[hunkId];
-    Object.values(linePlaceholders).forEach(({ placeholder }) => {
-      const children = Array.from(placeholder.children);
+    const hunkLines = this.activeHunksLines[hunkId];
+    Object.values(hunkLines)
+      .flat()
+      .forEach(({ placeholder }) => {
+        placeholder.classList.add(`highlight-${classPostFix}`);
 
-      for (const child of children) {
-        child.classList.add(`highlight-${classPostFix}`);
-      }
-
-      setTimeout(() => {
-        for (const child of children) {
-          child.classList.remove(`highlight-${classPostFix}`);
-        }
-      }, 1200);
-    });
+        setTimeout(() => {
+          placeholder.classList.remove(`highlight-${classPostFix}`);
+        }, 1200);
+      });
   };
+
+  private isInRange(
+    { lineNumber, lineOffset }: { lineNumber: number; lineOffset: number },
+    {
+      startLine,
+      startLineOffset,
+      endLine,
+      endLineOffset,
+    }: {
+      startLine: number;
+      startLineOffset: number;
+      endLine: number;
+      endLineOffset: number;
+    },
+  ) {
+    return (
+      (lineNumber > startLine && lineNumber < endLine) ||
+      (lineNumber === startLine &&
+        lineNumber !== endLine &&
+        lineOffset >= startLineOffset) ||
+      (lineNumber === endLine &&
+        lineNumber !== startLine &&
+        lineOffset < endLineOffset) ||
+      (lineNumber === startLine &&
+        lineNumber === endLine &&
+        lineOffset >= startLineOffset &&
+        lineOffset < endLineOffset)
+    );
+  }
 }
