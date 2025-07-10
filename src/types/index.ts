@@ -19,7 +19,14 @@ export type NodeType =
 export type HunkJson = BaseNodeJson & {
   path: string;
   content: string;
-  srcs?: string[];
+  srcs?: {
+    path: string;
+    content: string;
+    startLine: number;
+    startLineOffset: number;
+    endLine: number;
+    endLineOffset: number;
+  }[];
   dsts?: {
     startLine: number;
     startLineOffset: number;

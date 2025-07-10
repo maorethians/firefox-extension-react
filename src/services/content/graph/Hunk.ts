@@ -64,7 +64,7 @@ export class Hunk extends BaseNode {
     };
 
     if (this.node.srcs) {
-      result.src = this.node.srcs.join("\n");
+      result.src = this.node.srcs.map((src) => src.content).join("\n");
     }
 
     return result;

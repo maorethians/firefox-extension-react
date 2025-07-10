@@ -337,12 +337,13 @@ export class HunkLinesHandler {
           this.isInRange({ lineNumber, lineOffset }, dst),
         );
 
-        if (isInHunk && !isException) {
+        if (isInHunk || isException) {
           const component = React.createElement(HunkElementWrapper, {
             nodesStore: this.nodesStore,
-            hunk,
+            hunkId: id,
             element: childElement.cloneNode(true) as HTMLElement,
             strength,
+            type: isException ? "MOVED" : "ADDITION",
           });
           const placeholder = document.createElement("span");
           childElement.parentElement?.replaceChild(placeholder, childElement);

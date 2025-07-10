@@ -1,7 +1,6 @@
 import React, { RefObject } from "react";
 import { colors } from "@/public/colors.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { Hunk } from "@/services/content/graph/Hunk.ts";
 import { useColorMode } from "@/services/content/useColorMode.ts";
 import { useHunkHighlight } from "@/services/content/useHunkHighlight.ts";
 import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
@@ -15,23 +14,24 @@ const hexToRgba = (hex: string, alpha: number) => {
 
 export const HunkElementWrapper: React.FC<{
   nodesStore: NodesStore;
-  hunk: Hunk;
+  hunkId: string;
   element: HTMLElement;
   strength: number;
-}> = ({ hunk, element, strength }) => {
-  const { id } = hunk.node;
-
+  type: "ADDITION" | "MOVED";
+}> = ({ hunkId, element, strength, type }) => {
   const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
   const setSubjectHunkId = useSubjectHunkId((state) => state.setHunkId);
 
-  const hunkHighlight = useHunkHighlight((state) => state.hunkHighlight[id]);
+  const hunkHighlight = useHunkHighlight(
+    (state) => state.hunkHighlight[hunkId],
+  );
   const setHunkHighlight = useHunkHighlight((state) => state.setHunkHighlight);
 
   const colorMode = useColorMode((state) => state.colorMode);
   const color = hexToRgba(
-    hunkHighlight || id === subjectHunkId
+    hunkHighlight || hunkId === subjectHunkId
       ? colors[colorMode].HIGHLIGHT
-      : colors[colorMode].ADDITION,
+      : colors[colorMode][type],
     strength,
   );
 
@@ -51,13 +51,13 @@ export const HunkElementWrapper: React.FC<{
         cursor: "pointer",
       }}
       onMouseEnter={() => {
-        setHunkHighlight(id, true);
+        setHunkHighlight(hunkId, true);
       }}
       onMouseLeave={() => {
-        setHunkHighlight(id, false);
+        setHunkHighlight(hunkId, false);
       }}
       onClick={() => {
-        setSubjectHunkId(subjectHunkId === id ? null : id);
+        setSubjectHunkId(subjectHunkId === hunkId ? null : hunkId);
       }}
     ></span>
   );

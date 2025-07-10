@@ -3,12 +3,14 @@ export const colors = {
     PRIMARY: "#1A1730",
     SECONDARY: "#90caf9",
     ADDITION: "#1c4328",
+    MOVED: "#504f4b",
     HIGHLIGHT: "#5e5018",
   },
   LIGHT: {
     PRIMARY: "#D8D6E9",
     SECONDARY: "#1565C0",
     ADDITION: "#aceebb",
+    MOVED: "#edeae0",
     HIGHLIGHT: "#ffe2c1",
   },
   HUNK: {
