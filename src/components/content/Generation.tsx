@@ -7,7 +7,6 @@ import { useGenerationProcess } from "@/services/content/useGenerationProcess.ts
 import { useAdvanced } from "@/services/content/useAdvanced.ts";
 import { useAgentic } from "@/services/content/useAgentic.ts";
 import { useDescription } from "@/services/content/useDescription.ts";
-import { useTitle } from "@/services/content/useTitle.ts";
 import ReactMarkdown from "react-markdown";
 // @ts-ignore
 import Generate from "../../public/generate.svg?react";
@@ -19,11 +18,12 @@ import Simple from "../../public/simple.svg?react";
 import Agentic from "../../public/agentic.svg?react";
 // @ts-ignore
 import Gear from "../../public/gear.svg?react";
+import { useSubjectId } from "@/services/content/useSubjectId.ts";
+import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
 
 export const Generation: React.FC<{
-  subjectId: string;
   nodesStore: NodesStore;
-}> = ({ subjectId, nodesStore }) => {
+}> = ({ nodesStore }) => {
   const generationProcess = useGenerationProcess(
     (state) => state.generationProcess,
   );
@@ -40,20 +40,20 @@ export const Generation: React.FC<{
     }
   }, [inGenerationNodes]);
 
-  const description = useDescription((state) => state.description[subjectId]);
+  const subjectId = useSubjectId((state) => state.subjectId);
+  const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
+  const id = subjectHunkId ?? subjectId;
+
+  const description = useDescription((state) => state.description[id]);
   const setDescription = useDescription((state) => state.setDescription);
-  const title = useTitle((state) => state.title[subjectId]);
-  const setTitle = useTitle((state) => state.setTitle);
+
   useEffect(() => {
-    const node = nodesStore.getNodeById(subjectId).node;
+    const node = nodesStore.getNodeById(id).node;
 
     if (!description) {
-      setDescription(subjectId, node.description ?? "");
+      setDescription(id, node.description ?? "");
     }
-    if (!title) {
-      setTitle(subjectId, node.title ?? "");
-    }
-  }, [subjectId]);
+  }, [subjectId, subjectHunkId]);
 
   const isAdvanced = useAdvanced((state) => state.isAdvanced);
   const setAdvanced = useAdvanced((state) => state.setAdvanced);
@@ -64,22 +64,22 @@ export const Generation: React.FC<{
   const color = colors.HUNK.AGGREGATOR[colorMode === "DARK" ? "LIGHT" : "DARK"];
 
   return (
-    <div style={{ color }}>
-      <div style={{ borderBottom: "1px solid" }}>
-        <h3>{title || subjectId}</h3>
-        {title && <h5>{subjectId}</h5>}
-      </div>
+    <div style={{ color, width: "100%" }}>
       <div
-        style={{ display: "flex", flexDirection: "row", alignItems: "center" }}
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+        }}
       >
         <IconButton
-          loading={generationProcess[subjectId]}
+          loading={generationProcess[id]}
           style={{ height: "55px" }}
           onClick={async () => {
-            await nodesStore.describeNode(subjectId, {
+            await nodesStore.describeNode(id, {
               force: true,
             });
-            await nodesStore.entitleNode(subjectId, true);
+            await nodesStore.entitleNode(id, true);
 
             await nodesStore.updateStorage();
           }}
@@ -151,9 +151,11 @@ export const Generation: React.FC<{
           ))}
       </div>
 
-      {description && (
-        <ReactMarkdown className={"generation"}>{description}</ReactMarkdown>
-      )}
+      <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+        {description && (
+          <ReactMarkdown className={"generation"}>{description}</ReactMarkdown>
+        )}
+      </div>
     </div>
   );
 };

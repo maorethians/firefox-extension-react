@@ -1,10 +1,10 @@
 import React, { RefObject } from "react";
 import { colors } from "@/public/colors.ts";
-import { NodeOverlay } from "@/components/content/NodeOverlay.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 import { useColorMode } from "@/services/content/useColorMode.ts";
-import { HunkLinesHandler } from "@/services/content/HunkLinesHandler.ts";
+import { useHunkHighlight } from "@/services/content/useHunkHighlight.ts";
+import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
 
 const hexToRgba = (hex: string, alpha: number) => {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -13,55 +13,52 @@ const hexToRgba = (hex: string, alpha: number) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-export const HunkLineWrapper: React.FC<{
+export const HunkElementWrapper: React.FC<{
   nodesStore: NodesStore;
-  hunk: Hunk[];
+  hunk: Hunk;
   element: HTMLElement;
   strength: number;
-  hunkLinesHandler: HunkLinesHandler;
-}> = ({ nodesStore, hunk, element, strength, hunkLinesHandler }) => {
-  if (hunk.length === 0) {
-    return;
-  }
-  const { nodeType, hunkId } = hunk[0].node;
+}> = ({ hunk, element, strength }) => {
+  const { id } = hunk.node;
+
+  const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
+  const setSubjectHunkId = useSubjectHunkId((state) => state.setHunkId);
+
+  const hunkHighlight = useHunkHighlight((state) => state.hunkHighlight[id]);
+  const setHunkHighlight = useHunkHighlight((state) => state.setHunkHighlight);
 
   const colorMode = useColorMode((state) => state.colorMode);
-  const color = hexToRgba(colors.HUNK[nodeType][colorMode], strength);
+  const color = hexToRgba(
+    hunkHighlight || id === subjectHunkId
+      ? colors[colorMode].HIGHLIGHT
+      : colors[colorMode].ADDITION,
+    strength,
+  );
 
   const ref: RefObject<HTMLDivElement | null> = useRef(null);
   useEffect(() => {
     if (ref.current && element) {
-      element.style.backgroundColor = color;
       ref.current.appendChild(element);
     }
   }, [element]);
 
-  useEffect(() => {
-    element.style.background = color;
-  }, [colorMode]);
-
-  const [isHovered, setIsHovered] = useState(false);
   return (
     <span
       ref={ref}
       style={{
         backgroundColor: color,
-        position: "relative",
         transition: "background-color 200ms ease",
+        cursor: "pointer",
       }}
       onMouseEnter={() => {
-        setIsHovered(true);
-        hunkLinesHandler.highlightHunk(hunkId);
+        setHunkHighlight(id, true);
       }}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {isHovered && (
-        <NodeOverlay
-          nodesStore={nodesStore}
-          nodeIds={hunk.map(({ node }) => node.id)}
-          style={{ top: 0, right: "100%" }}
-        />
-      )}
-    </span>
+      onMouseLeave={() => {
+        setHunkHighlight(id, false);
+      }}
+      onClick={() => {
+        setSubjectHunkId(subjectHunkId === id ? null : id);
+      }}
+    ></span>
   );
 };

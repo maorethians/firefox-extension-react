@@ -22,6 +22,8 @@ import Previous from "../../public/previous.svg?react";
 import Next from "../../public/next.svg?react";
 // @ts-ignore
 import Scroll from "../../public/scroll.svg?react";
+import { SubjectNode } from "@/components/content/SubjectNode.tsx";
+import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
 
 export const ControlPanel: React.FC<{
   url: string;
@@ -40,7 +42,9 @@ export const ControlPanel: React.FC<{
     (state) => state.hunkLinesHandler,
   );
 
+  const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
   const subjectId = useSubjectId((state) => state.subjectId);
+
   const [isFirst, setFirst] = useState(false);
   const [isLast, setLast] = useState(true);
   useEffect(() => {
@@ -62,91 +66,105 @@ export const ControlPanel: React.FC<{
   return (
     <div
       style={{
-        backgroundColor: colors[colorMode].PRIMARY,
         display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        height: "55px",
+        flexDirection: "column",
+        backgroundColor: colors[colorMode].PRIMARY,
       }}
     >
-      <ColorModeSwitch
-        checked={colorMode === "DARK"}
-        onChange={async () => {
-          const newColorMode = colorMode === "DARK" ? "LIGHT" : "DARK";
-
-          setColorMode(newColorMode);
-          await storage.setItem(COLOR_MODE_STORAGE_KEY, newColorMode);
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          height: "55px",
         }}
-      />
+      >
+        <ColorModeSwitch
+          checked={colorMode === "DARK"}
+          onChange={async () => {
+            const newColorMode = colorMode === "DARK" ? "LIGHT" : "DARK";
 
-      {narrator && (
-        <div style={{ height: "100%" }}>
-          <IconButton style={{ height: "100%" }} onClick={narrator.beginStory}>
-            <GoToStart
-              style={{
-                color,
-                width: "100%",
-                height: "100%",
-              }}
-            />
-          </IconButton>
-          <IconButton
-            disabled={isFirst}
-            style={{ height: "100%" }}
-            onClick={narrator.previousChapter}
-          >
-            <Previous
-              style={{
-                color,
-                width: "100%",
-                height: "100%",
-              }}
-            />
-          </IconButton>
-          <IconButton
-            disabled={isLast}
-            style={{ height: "100%" }}
-            onClick={narrator.nextChapter}
-          >
-            <Next
-              style={{
-                color,
-                width: "100%",
-                height: "100%",
-              }}
-            />
-          </IconButton>
-          <IconButton
-            style={{ height: "100%" }}
-            onClick={hunkLinesHandler?.scroll}
-          >
-            <Scroll
-              style={{
-                color,
-                width: "100%",
-                height: "100%",
-              }}
-            />
-          </IconButton>
-        </div>
-      )}
-
-      {narrator && (
-        <IconButton
-          onClick={async () => {
-            const parameterizedUrl = `${browser.runtime.getURL("/graph.html")}?url=${url}`;
-            browser.runtime.sendMessage({
-              action: OPEN_TAB_MESSAGE,
-              url: parameterizedUrl,
-            });
+            setColorMode(newColorMode);
+            await storage.setItem(COLOR_MODE_STORAGE_KEY, newColorMode);
           }}
-          style={{ height: "100%" }}
-        >
-          <Hierarchy style={{ fill: color, width: "100%", height: "100%" }} />
-        </IconButton>
-      )}
+        />
 
-      {!narrator && <CircularProgress style={{ marginRight: "10px" }} />}
+        {narrator && (
+          <div style={{ height: "100%" }}>
+            <IconButton
+              disabled={isFirst || !!subjectHunkId}
+              style={{ height: "100%" }}
+              onClick={narrator.beginStory}
+            >
+              <GoToStart
+                style={{
+                  color,
+                  width: "100%",
+                  height: "100%",
+                }}
+              />
+            </IconButton>
+            <IconButton
+              disabled={isFirst || !!subjectHunkId}
+              style={{ height: "100%" }}
+              onClick={narrator.previousChapter}
+            >
+              <Previous
+                style={{
+                  color,
+                  width: "100%",
+                  height: "100%",
+                }}
+              />
+            </IconButton>
+            <IconButton
+              disabled={isLast || !!subjectHunkId}
+              style={{ height: "100%" }}
+              onClick={narrator.nextChapter}
+            >
+              <Next
+                style={{
+                  color,
+                  width: "100%",
+                  height: "100%",
+                }}
+              />
+            </IconButton>
+            <IconButton
+              disabled={!!subjectHunkId}
+              style={{ height: "100%" }}
+              onClick={hunkLinesHandler?.scroll}
+            >
+              <Scroll
+                style={{
+                  color,
+                  width: "100%",
+                  height: "100%",
+                }}
+              />
+            </IconButton>
+          </div>
+        )}
+
+        {narrator && (
+          <IconButton
+            onClick={async () => {
+              const parameterizedUrl = `${browser.runtime.getURL("/graph.html")}?url=${url}`;
+              browser.runtime.sendMessage({
+                action: OPEN_TAB_MESSAGE,
+                url: parameterizedUrl,
+              });
+            }}
+            style={{ height: "100%" }}
+          >
+            <Hierarchy style={{ fill: color, width: "100%", height: "100%" }} />
+          </IconButton>
+        )}
+
+        {!narrator && <CircularProgress style={{ marginRight: "10px" }} />}
+      </div>
+
+      {narrator && <SubjectNode nodesStore={nodesStore} />}
     </div>
   );
 };

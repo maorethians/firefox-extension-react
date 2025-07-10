@@ -2,16 +2,18 @@ import { groupBy, uniq } from "lodash";
 import ReactDOM from "react-dom/client";
 import React from "react";
 import BPromise from "bluebird";
-import { HunkLineWrapper } from "@/components/content/HunkLineWrapper.tsx";
+import { HunkElementWrapper } from "@/components/content/HunkElementWrapper.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
-import { isHunk } from "@/types";
 import { UrlHelper } from "@/services/UrlHelper.ts";
-import { useColorMode } from "@/services/content/useColorMode.ts";
 import {
   SUBJECT_ID_MESSAGE,
   useSubjectId,
 } from "@/services/content/useSubjectId.ts";
+import {
+  hunkHighlightTimeoutIds,
+  useHunkHighlight,
+} from "@/services/content/useHunkHighlight.ts";
 
 type ClosenessType = "start" | "end";
 type Direction = "up" | "down";
@@ -158,6 +160,17 @@ export class HunkLinesHandler {
       await this.populateTableMap.pullRequest();
     }
 
+    for (const fileRows of Object.values(this.fileDiffTable)) {
+      const rows = Array.from(fileRows.children);
+      for (const row of rows) {
+        let column = row.firstElementChild;
+        while (column) {
+          (column as HTMLElement).style.removeProperty("background-color");
+          column = column.nextElementSibling;
+        }
+      }
+    }
+
     const subjectNode = this.nodesStore.getNodeById("root");
     if (!subjectNode) {
       return;
@@ -194,8 +207,8 @@ export class HunkLinesHandler {
     const { firstGeneration, extendedGenerations } =
       this.nodesStore.getDescendantHunks(subjectNode);
 
-    await this.injectGenerationLines(firstGeneration, 0.6);
-    await this.injectGenerationLines(extendedGenerations, 0.3);
+    await this.injectGenerationLines(firstGeneration, 1);
+    await this.injectGenerationLines(extendedGenerations, 0.45);
 
     this.updateScrollList();
     this.scrollIndex =
@@ -203,32 +216,22 @@ export class HunkLinesHandler {
   }
 
   private async injectGenerationLines(generation: Hunk[], strength: number) {
-    const hunkIds = uniq(generation.map(({ node }) => node.hunkId));
-    const hunks = this.nodesStore
-      .getNodes()
-      .filter(
-        ({ node }) => isHunk(node) && hunkIds.includes(node.hunkId),
-      ) as Hunk[];
-    const groupedHunks = Object.values(
-      groupBy(hunks, ({ node }) => node.hunkId),
-    );
-
-    for (const hunk of groupedHunks) {
+    for (const hunk of generation) {
       await this.injectHunkLines(hunk, strength);
     }
   }
 
-  private async injectHunkLines(hunk: Hunk[], strength: number) {
+  private async injectHunkLines(hunk: Hunk, strength: number) {
     const {
+      id,
       startLine,
       startLineOffset,
       endLine,
       endLineOffset,
       path,
-      hunkId,
       dsts,
-    } = hunk[0].node;
-    if (this.activeHunksLines[hunkId]) {
+    } = hunk.node;
+    if (this.activeHunksLines[id]) {
       return;
     }
 
@@ -335,12 +338,11 @@ export class HunkLinesHandler {
         );
 
         if (isInHunk && !isException) {
-          const component = React.createElement(HunkLineWrapper, {
+          const component = React.createElement(HunkElementWrapper, {
             nodesStore: this.nodesStore,
             hunk,
             element: childElement.cloneNode(true) as HTMLElement,
             strength,
-            hunkLinesHandler: this,
           });
           const placeholder = document.createElement("span");
           childElement.parentElement?.replaceChild(placeholder, childElement);
@@ -362,7 +364,7 @@ export class HunkLinesHandler {
       }
     }
 
-    this.activeHunksLines[hunkId] = linePlaceholder;
+    this.activeHunksLines[id] = linePlaceholder;
   }
 
   private getRowInfo(row?: Element | null) {
@@ -493,7 +495,7 @@ export class HunkLinesHandler {
       .sort((e1, e2) => e1[0] - e2[0])
       .map(([_fileOrder, hunks]) => hunks)
       .flat();
-    const orderedHunkIds = uniq(orderedHunks.map((hunk) => hunk.node.hunkId));
+    const orderedHunkIds = uniq(orderedHunks.map((hunk) => hunk.node.id));
 
     const scrollList = orderedHunkIds
       .map((hunkId) =>
@@ -534,23 +536,12 @@ export class HunkLinesHandler {
     const { element, hunkId } = scrollList[this.scrollIndex];
     element.scrollIntoView({ behavior: "smooth", block: "center" });
 
-    this.highlightHunk(hunkId);
-  };
+    const setHunkHighlight = useHunkHighlight.getState().setHunkHighlight;
+    setHunkHighlight(hunkId, true);
 
-  highlightHunk = (hunkId: string) => {
-    const colorMode = useColorMode.getState().colorMode;
-    const classPostFix = colorMode.toLowerCase();
-
-    const hunkLines = this.activeHunksLines[hunkId];
-    Object.values(hunkLines)
-      .flat()
-      .forEach(({ placeholder }) => {
-        placeholder.classList.add(`highlight-${classPostFix}`);
-
-        setTimeout(() => {
-          placeholder.classList.remove(`highlight-${classPostFix}`);
-        }, 1200);
-      });
+    hunkHighlightTimeoutIds[hunkId] = setTimeout(() => {
+      setHunkHighlight(hunkId, false);
+    }, 1000);
   };
 
   private isInRange(

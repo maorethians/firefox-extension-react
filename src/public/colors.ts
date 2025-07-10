@@ -2,10 +2,14 @@ export const colors = {
   DARK: {
     PRIMARY: "#1A1730",
     SECONDARY: "#90caf9",
+    ADDITION: "#1c4328",
+    HIGHLIGHT: "#5e5018",
   },
   LIGHT: {
     PRIMARY: "#D8D6E9",
     SECONDARY: "#1565C0",
+    ADDITION: "#aceebb",
+    HIGHLIGHT: "#ffe2c1",
   },
   HUNK: {
     BASE: { DARK: "#1f4972", LIGHT: "#D0E1F9" },

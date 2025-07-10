@@ -1,8 +1,9 @@
 import { Steps } from "@/components/popup/Steps.tsx";
 
-// TODO: markup
 // TODO: retry on service down
-// TODO: new highlighting system
+// TODO: inject on unified/split
+// TODO: highlight srcs (src/dst scroll)
+// TODO: new loading system (each loading needs to check only sub nodes)
 
 function App() {
   return (

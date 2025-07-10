@@ -12,7 +12,6 @@ const steps = [LaunchService, LLMKey];
 
 export const Steps: React.FC = () => {
   const [step, setStep] = React.useState(0);
-
   const StepComponent = steps[step];
 
   return (

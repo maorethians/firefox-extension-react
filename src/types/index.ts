@@ -17,7 +17,6 @@ export type NodeType =
   | RootJson["nodeType"];
 
 export type HunkJson = BaseNodeJson & {
-  hunkId: string;
   path: string;
   content: string;
   srcs?: string[];

@@ -1,5 +1,4 @@
 import React from "react";
-import { intersection, uniq } from "lodash";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { isAggregator, isHunk } from "@/types";
 import { useColorMode } from "@/services/content/useColorMode.ts";
@@ -13,39 +12,39 @@ import {
 } from "reagraph";
 import { nanoid } from "nanoid";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
+import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
 
 export const Navigator: React.FC<{
-  nodeIds: string[];
   nodesStore: NodesStore;
-}> = ({ nodeIds, nodesStore }) => {
-  const setSubjectId = useSubjectId((state) => state.setSubjectId);
-
+}> = ({ nodesStore }) => {
   const colorMode = useColorMode((state) => state.colorMode);
   const color = colors.HUNK.AGGREGATOR[colorMode === "DARK" ? "LIGHT" : "DARK"];
 
-  const nodes = nodeIds.map((id) => nodesStore.getNodeById(id));
+  const subjectId = useSubjectId((state) => state.subjectId);
+  const setSubjectId = useSubjectId((state) => state.setSubjectId);
+  const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
+  const setSubjectHunkId = useSubjectHunkId((state) => state.setHunkId);
+
+  const { node: subjectNode } = nodesStore.getNodeById(
+    subjectHunkId ?? subjectId,
+  );
 
   const children = nodesStore
     .getNodes()
     .filter(
       ({ node }) =>
-        intersection(nodeIds, node.aggregatorIds).length > 0 &&
-        isAggregator(node),
+        node.aggregatorIds.includes(subjectNode.id) && isAggregator(node),
     );
 
-  const parentIds = uniq(
-    nodes.map(({ node }) => node.aggregatorIds ?? []).flat(),
-  );
   const parents = nodesStore
     .getNodes()
-    .filter(({ node }) => parentIds.includes(node.id));
+    .filter(({ node }) => subjectNode.aggregatorIds.includes(node.id));
 
   const graphNodes: GraphNode[] = [];
   const graphEdges: GraphEdge[] = [];
 
-  const subject = nodes[0];
   graphNodes.push({
-    id: subject.node.id,
+    id: subjectNode.id,
     labelVisible: false,
     fill: color,
   });
@@ -58,7 +57,7 @@ export const Navigator: React.FC<{
     graphEdges.push({
       id: nanoid(),
       source: parent.node.id,
-      target: subject.node.id,
+      target: subjectNode.id,
     });
   });
 
@@ -69,7 +68,7 @@ export const Navigator: React.FC<{
     });
     graphEdges.push({
       id: nanoid(),
-      source: subject.node.id,
+      source: subjectNode.id,
       target: child.node.id,
     });
   });
@@ -78,8 +77,8 @@ export const Navigator: React.FC<{
     <div
       style={{
         position: "relative",
-        width: `150px`,
-        height: `150px`,
+        width: `350px`,
+        height: `250px`,
         overflow: "hidden",
         color,
       }}
@@ -96,6 +95,8 @@ export const Navigator: React.FC<{
           if (isHunk(node)) {
             return;
           }
+
+          setSubjectHunkId(null);
 
           setSubjectId(node.id);
         }}
