@@ -4,8 +4,8 @@ import { isAggregator } from "@/types";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
 
 export class Narrator {
-  nodesStore: NodesStore;
-  private story: string[] = [];
+  private nodesStore: NodesStore;
+  story: string[] = [];
 
   constructor(nodesStore: NodesStore) {
     this.nodesStore = nodesStore;

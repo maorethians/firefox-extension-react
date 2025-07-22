@@ -1,5 +1,4 @@
 import React from "react";
-import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Generation } from "@/components/content/Generation.tsx";
 import { IconButton } from "@mui/material";
 import { Navigator } from "@/components/content/Navigator.tsx";
@@ -14,10 +13,11 @@ import { colors } from "@/public/colors.ts";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
 import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
 import { useTitle } from "@/services/content/useTitle.ts";
+import { useNodesStore } from "@/services/content/useNodesStore.ts";
 
 export const SubjectNode: React.FC<{
-  nodesStore: NodesStore;
-}> = ({ nodesStore }) => {
+  url: string;
+}> = ({ url }) => {
   const colorMode = useColorMode((state) => state.colorMode);
   const color = colors.HUNK.AGGREGATOR[colorMode === "DARK" ? "LIGHT" : "DARK"];
   const highlightColor = colors[colorMode].HIGHLIGHT;
@@ -28,13 +28,19 @@ export const SubjectNode: React.FC<{
 
   const id = subjectHunkId ?? subjectId;
 
+  const nodesStore = useNodesStore((state) => state.nodesStore);
+
   const title = useTitle((state) => state.title[id]);
   const setTitle = useTitle((state) => state.setTitle);
   useEffect(() => {
+    if (!nodesStore) {
+      return;
+    }
+
     const node = nodesStore.getNodeById(id).node;
 
     if (!title) {
-      setTitle(id, node.title ?? "");
+      setTitle(id, node?.title ?? "");
     }
   }, [subjectId, subjectHunkId]);
 
@@ -124,8 +130,8 @@ export const SubjectNode: React.FC<{
         )}
       </div>
 
-      {isGeneration && <Generation nodesStore={nodesStore} />}
-      {isNavigation && <Navigator nodesStore={nodesStore} />}
+      {isGeneration && <Generation url={url} />}
+      {isNavigation && <Navigator />}
     </div>
   );
 };

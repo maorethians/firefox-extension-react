@@ -6,7 +6,6 @@ import { TraversalComponent } from "@/services/content/graph/TraversalComponent.
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 import { StorageKey } from "@/services/StorageKey.ts";
-import { UrlHelper } from "@/services/UrlHelper.ts";
 import { intersection, last, sum } from "lodash";
 
 export class NodesStore {
@@ -128,10 +127,7 @@ export class NodesStore {
       edges: this.edges,
     };
 
-    await storage.setItem(
-      StorageKey.hierarchy(UrlHelper.getId(this.url)),
-      hierarchy,
-    );
+    await storage.setItem(StorageKey.hierarchy(this.url), hierarchy);
   };
 
   getDescendantHunks(subjectNode: BaseNode) {

@@ -3,7 +3,7 @@ import { colors } from "@/public/colors.ts";
 import { Narrator } from "@/services/content/Narrator.ts";
 import { CircularProgress, IconButton } from "@mui/material";
 import { OPEN_TAB_MESSAGE } from "@/entrypoints/background.ts";
-import { useNodesStores } from "@/services/content/useNodesStores.ts";
+import { useNodesStore } from "@/services/content/useNodesStore.ts";
 import { useColorMode } from "@/services/content/useColorMode.ts";
 import {
   COLOR_MODE_STORAGE_KEY,
@@ -22,14 +22,22 @@ import Previous from "../../public/previous.svg?react";
 import Next from "../../public/next.svg?react";
 // @ts-ignore
 import Scroll from "../../public/scroll.svg?react";
+// @ts-ignore
+import ThumbsUp from "../../public/thumbs-up.svg?react";
+// @ts-ignore
+import ThumbsDown from "../../public/thumbs-down.svg?react";
 import { SubjectNode } from "@/components/content/SubjectNode.tsx";
 import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
+import { Evaluation } from "@/services/content/Evaluation.ts";
+import { useEvaluation } from "@/services/content/useEvaluation.ts";
 
 export const ControlPanel: React.FC<{
   url: string;
 }> = ({ url }) => {
+  const evaluation = new Evaluation(url);
+
   const [narrator, setNarrator] = React.useState<Narrator>();
-  const nodesStore = useNodesStores((state) => state.nodesStores[url]);
+  const nodesStore = useNodesStore((state) => state.nodesStore);
   useEffect(() => {
     if (!nodesStore) {
       return;
@@ -44,6 +52,8 @@ export const ControlPanel: React.FC<{
 
   const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
   const subjectId = useSubjectId((state) => state.subjectId);
+
+  const storyEvaluation = useEvaluation((state) => state.evaluation["story"]);
 
   const [isFirst, setFirst] = useState(false);
   const [isLast, setLast] = useState(true);
@@ -143,6 +153,32 @@ export const ControlPanel: React.FC<{
                 }}
               />
             </IconButton>
+            <IconButton
+              disabled={!!subjectHunkId}
+              style={{ height: "60%" }}
+              onClick={() => evaluation.evalNode("story", "positive")}
+            >
+              <ThumbsUp
+                style={{
+                  color: storyEvaluation === "positive" ? "green" : color,
+                  width: "100%",
+                  height: "100%",
+                }}
+              />
+            </IconButton>
+            <IconButton
+              disabled={!!subjectHunkId}
+              style={{ height: "60%" }}
+              onClick={() => evaluation.evalNode("story", "negative")}
+            >
+              <ThumbsDown
+                style={{
+                  color: storyEvaluation === "negative" ? "red" : color,
+                  width: "100%",
+                  height: "100%",
+                }}
+              />
+            </IconButton>
           </div>
         )}
 
@@ -164,7 +200,7 @@ export const ControlPanel: React.FC<{
         {!narrator && <CircularProgress style={{ marginRight: "10px" }} />}
       </div>
 
-      {narrator && <SubjectNode nodesStore={nodesStore} />}
+      {narrator && <SubjectNode url={url} />}
     </div>
   );
 };

@@ -7,8 +7,11 @@ import { Box } from "@mui/system";
 import Container from "../../public/container.svg?react";
 // @ts-ignore
 import AiKey from "../../public/aiKey.svg?react";
+// @ts-ignore
+import Feedback from "../../public/feedback.svg?react";
+import { ExportEvaluation } from "@/components/popup/Steps/ExportEvaluation.tsx";
 
-const steps = [LaunchService, LLMKey];
+const steps = [LaunchService, LLMKey, ExportEvaluation];
 
 export const Steps: React.FC = () => {
   const [step, setStep] = React.useState(0);
@@ -31,6 +34,10 @@ export const Steps: React.FC = () => {
             />
             <Tab
               icon={<AiKey style={{ height: "25px" }} />}
+              style={{ flex: 1 }}
+            />
+            <Tab
+              icon={<Feedback style={{ height: "25px" }} />}
               style={{ flex: 1 }}
             />
           </Tabs>

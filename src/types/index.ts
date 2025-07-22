@@ -3,7 +3,6 @@ interface BaseNodeJson {
   aggregatorIds: string[];
   description?: string;
   title?: string;
-  chat?: string[];
   nodeType: string;
 }
 

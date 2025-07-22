@@ -1,5 +1,4 @@
 import React from "react";
-import { NodesStore } from "@/services/content/NodesStore.ts";
 import { isAggregator, isHunk } from "@/types";
 import { useColorMode } from "@/services/content/useColorMode.ts";
 import { colors } from "@/public/colors.ts";
@@ -13,10 +12,9 @@ import {
 import { nanoid } from "nanoid";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
 import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
+import { useNodesStore } from "@/services/content/useNodesStore.ts";
 
-export const Navigator: React.FC<{
-  nodesStore: NodesStore;
-}> = ({ nodesStore }) => {
+export const Navigator: React.FC = () => {
   const colorMode = useColorMode((state) => state.colorMode);
   const color = colors.HUNK.AGGREGATOR[colorMode === "DARK" ? "LIGHT" : "DARK"];
 
@@ -24,10 +22,14 @@ export const Navigator: React.FC<{
   const setSubjectId = useSubjectId((state) => state.setSubjectId);
   const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
   const setSubjectHunkId = useSubjectHunkId((state) => state.setHunkId);
+  const id = subjectHunkId ?? subjectId;
 
-  const { node: subjectNode } = nodesStore.getNodeById(
-    subjectHunkId ?? subjectId,
-  );
+  const nodesStore = useNodesStore((state) => state.nodesStore);
+  if (!nodesStore) {
+    return;
+  }
+
+  const { node: subjectNode } = nodesStore.getNodeById(id);
 
   const children = nodesStore
     .getNodes()

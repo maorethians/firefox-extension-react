@@ -1,5 +1,4 @@
 import React from "react";
-import { NodesStore } from "@/services/content/NodesStore.ts";
 import { useColorMode } from "@/services/content/useColorMode.ts";
 import { colors } from "@/public/colors.ts";
 import { CircularProgress, IconButton } from "@mui/material";
@@ -18,12 +17,21 @@ import Simple from "../../public/simple.svg?react";
 import Agentic from "../../public/agentic.svg?react";
 // @ts-ignore
 import Gear from "../../public/gear.svg?react";
+// @ts-ignore
+import ThumbsUp from "../../public/thumbs-up.svg?react";
+// @ts-ignore
+import ThumbsDown from "../../public/thumbs-down.svg?react";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
 import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
+import { Evaluation } from "@/services/content/Evaluation.ts";
+import { useEvaluation } from "@/services/content/useEvaluation.ts";
+import { useNodesStore } from "@/services/content/useNodesStore.ts";
 
 export const Generation: React.FC<{
-  nodesStore: NodesStore;
-}> = ({ nodesStore }) => {
+  url: string;
+}> = ({ url }) => {
+  const evaluation = new Evaluation(url);
+
   const generationProcess = useGenerationProcess(
     (state) => state.generationProcess,
   );
@@ -44,14 +52,21 @@ export const Generation: React.FC<{
   const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
   const id = subjectHunkId ?? subjectId;
 
+  const nodeEvaluation = useEvaluation((state) => state.evaluation[id]);
   const description = useDescription((state) => state.description[id]);
   const setDescription = useDescription((state) => state.setDescription);
 
+  const nodesStore = useNodesStore((state) => state.nodesStore);
+
   useEffect(() => {
+    if (!nodesStore) {
+      return;
+    }
+
     const node = nodesStore.getNodeById(id).node;
 
     if (!description) {
-      setDescription(id, node.description ?? "");
+      setDescription(id, node?.description ?? "");
     }
   }, [subjectId, subjectHunkId]);
 
@@ -62,6 +77,10 @@ export const Generation: React.FC<{
 
   const colorMode = useColorMode((state) => state.colorMode);
   const color = colors.HUNK.AGGREGATOR[colorMode === "DARK" ? "LIGHT" : "DARK"];
+
+  if (!nodesStore) {
+    return;
+  }
 
   return (
     <div style={{ color, width: "100%" }}>
@@ -136,6 +155,35 @@ export const Generation: React.FC<{
             />
           )}
         </IconButton>
+        {description && (
+          <IconButton
+            style={{ height: "35px" }}
+            onClick={() => evaluation.evalNode(id, "positive")}
+          >
+            <ThumbsUp
+              style={{
+                color: nodeEvaluation === "positive" ? "green" : color,
+                width: "100%",
+                height: "100%",
+              }}
+            />
+          </IconButton>
+        )}
+        {description && (
+          <IconButton
+            style={{ height: "35px" }}
+            onClick={() => evaluation.evalNode(id, "negative")}
+          >
+            <ThumbsDown
+              style={{
+                color: nodeEvaluation === "negative" ? "red" : color,
+                width: "100%",
+                height: "100%",
+              }}
+            />
+          </IconButton>
+        )}
+
         {maxGenerationNodes > 0 &&
           (maxGenerationNodes - inGenerationNodes === 0 ? (
             <CircularProgress />
