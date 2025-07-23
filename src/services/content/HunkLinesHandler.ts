@@ -200,12 +200,8 @@ export class HunkLinesHandler {
   }
 
   private async injectSubjectLines() {
-    const subjectNode = this.nodesStore.getNodeById(
-      useSubjectId.getState().subjectId,
-    );
-
     const { firstGeneration, extendedGenerations } =
-      this.nodesStore.getDescendantHunks(subjectNode);
+      this.nodesStore.getDescendantHunks(useSubjectId.getState().subjectId);
 
     await this.injectGenerationLines(firstGeneration, 1);
     await this.injectGenerationLines(extendedGenerations, 0.45);
@@ -474,7 +470,7 @@ export class HunkLinesHandler {
 
   private updateScrollList = () => {
     const { firstGeneration } = this.nodesStore.getDescendantHunks(
-      this.nodesStore.getNodeById(useSubjectId.getState().subjectId),
+      useSubjectId.getState().subjectId,
     );
     const fileOrderedHunks = Object.entries(
       groupBy(

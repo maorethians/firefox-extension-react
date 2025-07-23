@@ -130,9 +130,7 @@ export class NodesStore {
     await storage.setItem(StorageKey.hierarchy(this.url), hierarchy);
   };
 
-  getDescendantHunks(subjectNode: BaseNode) {
-    const subjectId = subjectNode.node.id;
-
+  getDescendantHunks(subjectId: string) {
     if (this.nodeDescendents[subjectId]) {
       return this.nodeDescendents[subjectId];
     }
@@ -140,7 +138,7 @@ export class NodesStore {
     const firstGeneration: Hunk[] = [];
     const extendedGenerations: Hunk[] = [];
 
-    let hopNodeIds = [subjectNode.node.id];
+    let hopNodeIds = [subjectId];
     while (true) {
       const hopChildrenNodes = this.getNodes().filter(
         ({ node }) => intersection(hopNodeIds, node.aggregatorIds).length > 0,

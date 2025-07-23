@@ -14,6 +14,7 @@ import { useSubjectId } from "@/services/content/useSubjectId.ts";
 import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
 import { useTitle } from "@/services/content/useTitle.ts";
 import { useNodesStore } from "@/services/content/useNodesStore.ts";
+import { HunkJson, isHunk } from "@/types";
 
 export const SubjectNode: React.FC<{
   url: string;
@@ -29,16 +30,35 @@ export const SubjectNode: React.FC<{
   const id = subjectHunkId ?? subjectId;
 
   const nodesStore = useNodesStore((state) => state.nodesStore);
+  if (!nodesStore) {
+    return;
+  }
+
+  const node = nodesStore.getNodeById(id).node;
+
+  let shadowNode: HunkJson;
+  if (isHunk(node)) {
+    shadowNode = node;
+  } else {
+    const { firstGeneration } = nodesStore.getDescendantHunks(id);
+    shadowNode = firstGeneration[0].node;
+    for (const { node: generationNode } of firstGeneration) {
+      if (
+        shadowNode.endLine - shadowNode.startLine <
+        generationNode.endLine - generationNode.startLine
+      ) {
+        shadowNode = generationNode;
+      }
+    }
+  }
+  let shadowTitle = `${shadowNode.path.split("/").pop()}-${shadowNode.startLine}`;
+  if (shadowNode.startLine !== shadowNode.endLine) {
+    shadowTitle += `-${shadowNode.endLine}`;
+  }
 
   const title = useTitle((state) => state.title[id]);
   const setTitle = useTitle((state) => state.setTitle);
   useEffect(() => {
-    if (!nodesStore) {
-      return;
-    }
-
-    const node = nodesStore.getNodeById(id).node;
-
     if (!title) {
       setTitle(id, node?.title ?? "");
     }
@@ -84,9 +104,9 @@ export const SubjectNode: React.FC<{
             textOverflow: "ellipsis",
             maxWidth: "600px",
           }}
-          title={title || id}
+          title={title || shadowTitle}
         >
-          {title || id}
+          {title || shadowTitle}
         </h3>
 
         <IconButton
