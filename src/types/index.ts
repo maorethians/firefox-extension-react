@@ -10,6 +10,7 @@ export type NodeType =
   | HunkJson["nodeType"]
   | SuccessivePatternJson["nodeType"]
   | UsagePatternJson["nodeType"]
+  | SimilarityPatternJson["nodeType"]
   | TraversalComponentJson["nodeType"]
   | SingularPatternJson["nodeType"]
   | ClusterJson["nodeType"]
@@ -78,6 +79,10 @@ export type UsagePatternJson = BaseNodeJson & {
   nodeType: "USAGE";
 };
 
+export type SimilarityPatternJson = BaseNodeJson & {
+  nodeType: "SIMILARITY";
+};
+
 export type ReasonType = "COMMON" | "SIMILAR";
 
 export type TraversalComponentJson = BaseNodeJson & {
@@ -101,6 +106,7 @@ export type RootJson = BaseNodeJson & {
 export type AggregatorJson =
   | SuccessivePatternJson
   | UsagePatternJson
+  | SimilarityPatternJson
   | TraversalComponentJson
   | SingularPatternJson
   | ClusterJson

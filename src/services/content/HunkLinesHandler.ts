@@ -20,6 +20,9 @@ type Direction = "up" | "down";
 
 export class HunkLinesHandler {
   private readonly url: string;
+  private isCommit: boolean;
+  private isPullRequest: boolean;
+  private isPRCommit: boolean;
   private readonly nodesStore: NodesStore;
   private activeHunksLines: Record<
     string,
@@ -145,31 +148,42 @@ export class HunkLinesHandler {
       }
     },
   };
+  private getInnerTextWrapper = {
+    commit: (td: Element) => {
+      const codeLine = td.querySelector("code");
+      if (!codeLine) {
+        return;
+      }
+
+      return codeLine.getElementsByClassName("diff-text-inner").item(0);
+    },
+    pullRequest: (td: Element) => {
+      return td.getElementsByClassName("blob-code-inner").item(0);
+    },
+  };
 
   constructor(url: string, nodesStore: NodesStore) {
     this.url = url;
+    this.isCommit = UrlHelper.isCommit(url);
+    this.isPullRequest = UrlHelper.isPullRequest(url);
+    this.isPRCommit = UrlHelper.isPRCommit(url);
     this.nodesStore = nodesStore;
   }
 
   async init() {
-    if (UrlHelper.isCommit(this.url)) {
+    if (this.isCommit) {
       this.populateTableMap.commit();
     }
 
-    if (UrlHelper.isPRCommit(this.url) || UrlHelper.isPullRequest(this.url)) {
+    if (this.isPRCommit || this.isPullRequest) {
       await this.populateTableMap.pullRequest();
     }
 
-    for (const fileRows of Object.values(this.fileDiffTable)) {
-      const rows = Array.from(fileRows.children);
-      for (const row of rows) {
-        let column = row.firstElementChild;
-        while (column) {
-          (column as HTMLElement).style.removeProperty("background-color");
-          column = column.nextElementSibling;
-        }
-      }
-    }
+    this.removeDefaultBackground(
+      Object.values(this.fileDiffTable)
+        .map((fileRows) => Array.from(fileRows.children))
+        .flat(),
+    );
 
     const subjectNode = this.nodesStore.getNodeById("root");
     if (!subjectNode) {
@@ -287,14 +301,14 @@ export class HunkLinesHandler {
     for (const [lineNumberStr, line] of Object.entries(lines)) {
       const lineNumber = parseInt(lineNumberStr);
 
-      const codeLine = line.querySelector("code");
-      if (!codeLine) {
-        continue;
+      let innerText;
+      if (this.isCommit) {
+        innerText = this.getInnerTextWrapper.commit(line);
+      }
+      if (this.isPRCommit || this.isPullRequest) {
+        innerText = this.getInnerTextWrapper.pullRequest(line);
       }
 
-      const innerText = codeLine
-        .getElementsByClassName("diff-text-inner")
-        .item(0);
       if (!innerText) {
         continue;
       }
@@ -568,5 +582,21 @@ export class HunkLinesHandler {
         lineOffset >= startLineOffset &&
         lineOffset < endLineOffset)
     );
+  }
+
+  private removeDefaultBackground(rows: Element[]) {
+    for (const row of rows) {
+      let column = row.firstElementChild;
+      while (column) {
+        (column as HTMLElement).style.removeProperty("background-color");
+        (column as HTMLElement).classList.remove(
+          "blob-num-deletion",
+          "blob-code-deletion",
+          "blob-num-addition",
+          "blob-code-addition",
+        );
+        column = column.nextElementSibling;
+      }
+    }
   }
 }

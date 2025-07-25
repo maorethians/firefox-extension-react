@@ -7,6 +7,7 @@ import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 import { StorageKey } from "@/services/StorageKey.ts";
 import { intersection, last, sum } from "lodash";
+import { SimilarityPattern } from "@/services/content/graph/SimilarityPattern.ts";
 
 export class NodesStore {
   private readonly url: string;
@@ -39,6 +40,9 @@ export class NodesStore {
           break;
         case "USAGE":
           this.nodes[node.id] = new UsagePattern(node);
+          break;
+        case "SIMILARITY":
+          this.nodes[node.id] = new SimilarityPattern(node);
           break;
         case "SUCCESSIVE":
           this.nodes[node.id] = new SuccessivePattern(node);

@@ -87,10 +87,9 @@ export class UsagePattern extends BaseNode {
     }
 
     const useHunks = nodesStore.edges
-      .filter(
-        (edge) => edge.type === "EXPANSION" && edge.sourceId === this.node.id,
-      )
+      .filter((edge) => edge.type === "DEF_USE")
       .map((edge) => nodesStore.getNodeById(edge.targetId))
+      .filter(({ node }) => node.aggregatorIds.includes(this.node.id))
       .filter(({ node }) => isHunk(node)) as Hunk[];
     const useNodesId = useHunks.map((useNode) => useNode.node.id);
 
