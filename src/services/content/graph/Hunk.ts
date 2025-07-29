@@ -129,10 +129,7 @@ export class Hunk extends BaseNode {
       return;
     }
 
-    const aggregatorIds = this.node.aggregatorIds;
-    const aggregators = aggregatorIds
-      .map((id) => nodesStore.getNodeById(id))
-      .filter((aggregator) => aggregator.nodeType !== "SINGULAR");
+    const aggregators = this.getDependencies(nodesStore);
     // TODO: make it batch
     for (const aggregator of aggregators) {
       await aggregator.wrappedDescribeNode(nodesStore, {
@@ -160,4 +157,15 @@ export class Hunk extends BaseNode {
 
     await this.entitle();
   };
+
+  getDependencies(nodesStore: NodesStore): BaseNode[] {
+    const aggregatorIds = this.node.aggregatorIds;
+    return aggregatorIds
+      .map((id) => nodesStore.getNodeById(id))
+      .filter((aggregator) => aggregator.nodeType !== "SINGULAR");
+  }
+
+  shouldGenerate(_nodesStore: NodesStore): boolean {
+    return true;
+  }
 }

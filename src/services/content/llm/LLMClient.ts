@@ -12,42 +12,42 @@ export class LLMClient {
     this.model = LLMConfig[modelProvider].client(key);
   }
 
-  async generate(prompt: string): Promise<string | undefined> {
-    const result = await this.model.invoke(prompt);
-
-    try {
-      if (typeof result.content === "string") {
-        return result.content;
-      }
-    } catch (e) {}
-  }
-
-  static async generate(prompt: string): Promise<string | undefined> {
-    const client = await getLLMClient();
-    if (!client) {
-      return;
-    }
-
-    return client.generate(prompt);
-  }
+  // async generate(prompt: string): Promise<string | undefined> {
+  //   const result = await this.model.invoke(prompt);
+  //
+  //   try {
+  //     if (typeof result.content === "string") {
+  //       return result.content;
+  //     }
+  //   } catch (e) {}
+  // }
+  //
+  // static async generate(prompt: string): Promise<string | undefined> {
+  //   const client = await getLLMClient();
+  //   if (!client) {
+  //     return;
+  //   }
+  //
+  //   return client.generate(prompt);
+  // }
 
   async stream(prompt: string, tools?: StructuredToolInterface[]) {
     try {
-      if (tools) {
-        const agent = createToolCallingAgent({
-          llm: this.model,
-          prompt: ChatPromptTemplate.fromMessages([
-            // prompt contains code which may collide with LangChain prompt template engine
-            ["system", "{prompt}"],
-            ["placeholder", "{agent_scratchpad}"],
-          ]),
-          tools,
-        });
-        const executor = new AgentExecutor({ agent, tools });
-        return executor.stream({ prompt });
+      if (!tools) {
+        return this.model.stream(prompt);
       }
-
-      return this.model.stream(prompt);
+      
+      const agent = createToolCallingAgent({
+        llm: this.model,
+        prompt: ChatPromptTemplate.fromMessages([
+          // prompt contains code which may collide with LangChain prompt template engine
+          ["system", "{prompt}"],
+          ["placeholder", "{agent_scratchpad}"],
+        ]),
+        tools,
+      });
+      const executor = new AgentExecutor({ agent, tools });
+      return executor.stream({ prompt });
     } catch (e) {
       return;
     }

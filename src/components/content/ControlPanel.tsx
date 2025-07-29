@@ -1,7 +1,7 @@
 import React from "react";
 import { colors } from "@/public/colors.ts";
 import { Narrator } from "@/services/content/Narrator.ts";
-import { CircularProgress, IconButton } from "@mui/material";
+import { CircularProgress, IconButton, LinearProgress } from "@mui/material";
 import { OPEN_TAB_MESSAGE } from "@/entrypoints/background.ts";
 import { useNodesStore } from "@/services/content/useNodesStore.ts";
 import { useColorMode } from "@/services/content/useColorMode.ts";
@@ -36,6 +36,9 @@ export const ControlPanel: React.FC<{
 }> = ({ url }) => {
   const evaluation = new Evaluation(url);
 
+  const [storyLength, setStoryLength] = useState(2);
+  const [currentIndex, setCurrentIndex] = useState(1);
+
   const [narrator, setNarrator] = React.useState<Narrator>();
   const nodesStore = useNodesStore((state) => state.nodesStore);
   useEffect(() => {
@@ -43,7 +46,11 @@ export const ControlPanel: React.FC<{
       return;
     }
 
-    setNarrator(new Narrator(nodesStore));
+    const narrator = new Narrator(nodesStore);
+    setNarrator(narrator);
+
+    setStoryLength(narrator.story.length);
+    setCurrentIndex(narrator.currentIndex());
   }, [nodesStore]);
 
   const hunkLinesHandler = useHunkLinesHandler(
@@ -55,15 +62,12 @@ export const ControlPanel: React.FC<{
 
   const storyEvaluation = useEvaluation((state) => state.evaluation["story"]);
 
-  const [isFirst, setFirst] = useState(false);
-  const [isLast, setLast] = useState(true);
   useEffect(() => {
     if (!narrator) {
       return;
     }
 
-    setFirst(narrator.isFirst());
-    setLast(narrator.isLast());
+    setCurrentIndex(narrator.currentIndex());
   }, [subjectId]);
 
   const colorMode = useColorMode((state) => state.colorMode);
@@ -102,7 +106,7 @@ export const ControlPanel: React.FC<{
         {narrator && (
           <div style={{ height: "100%" }}>
             <IconButton
-              disabled={isFirst || !!subjectHunkId}
+              disabled={currentIndex === 0 || !!subjectHunkId}
               style={{ height: "100%" }}
               onClick={narrator.beginStory}
             >
@@ -115,7 +119,7 @@ export const ControlPanel: React.FC<{
               />
             </IconButton>
             <IconButton
-              disabled={isFirst || !!subjectHunkId}
+              disabled={currentIndex === 0 || !!subjectHunkId}
               style={{ height: "100%" }}
               onClick={narrator.previousChapter}
             >
@@ -128,7 +132,7 @@ export const ControlPanel: React.FC<{
               />
             </IconButton>
             <IconButton
-              disabled={isLast || !!subjectHunkId}
+              disabled={currentIndex === storyLength - 1 || !!subjectHunkId}
               style={{ height: "100%" }}
               onClick={narrator.nextChapter}
             >
@@ -199,6 +203,14 @@ export const ControlPanel: React.FC<{
 
         {!narrator && <CircularProgress style={{ marginRight: "10px" }} />}
       </div>
+
+      {!subjectHunkId && (
+        <LinearProgress
+          variant="determinate"
+          value={(100 * currentIndex) / (storyLength - 1)}
+          style={{ height: "2px" }}
+        />
+      )}
 
       {narrator && <SubjectNode url={url} />}
     </div>

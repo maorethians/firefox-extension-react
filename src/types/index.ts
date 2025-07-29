@@ -22,6 +22,10 @@ export type HunkJson = BaseNodeJson & {
   srcs?: {
     path: string;
     content: string;
+    contexts: {
+      content: string;
+      nodeType: NodeType;
+    };
     startLine: number;
     startLineOffset: number;
     endLine: number;

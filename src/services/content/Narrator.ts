@@ -82,7 +82,4 @@ export class Narrator {
 
   currentIndex = () =>
     this.story.findIndex((id) => id === useSubjectId.getState().subjectId);
-
-  isFirst = () => this.currentIndex() === 0;
-  isLast = () => this.currentIndex() === this.story.length - 1;
 }

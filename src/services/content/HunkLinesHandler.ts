@@ -158,7 +158,9 @@ export class HunkLinesHandler {
       return codeLine.getElementsByClassName("diff-text-inner").item(0);
     },
     pullRequest: (td: Element) => {
-      return td.getElementsByClassName("blob-code-inner").item(0);
+      return td.classList.contains("blob-code-inner")
+        ? td
+        : td.getElementsByClassName("blob-code-inner").item(0);
     },
   };
 
@@ -301,25 +303,25 @@ export class HunkLinesHandler {
     for (const [lineNumberStr, line] of Object.entries(lines)) {
       const lineNumber = parseInt(lineNumberStr);
 
-      let innerText;
+      let innerTextWrapper;
       if (this.isCommit) {
-        innerText = this.getInnerTextWrapper.commit(line);
+        innerTextWrapper = this.getInnerTextWrapper.commit(line);
       }
       if (this.isPRCommit || this.isPullRequest) {
-        innerText = this.getInnerTextWrapper.pullRequest(line);
+        innerTextWrapper = this.getInnerTextWrapper.pullRequest(line);
       }
 
-      if (!innerText) {
+      if (!innerTextWrapper) {
         continue;
       }
 
       // wrap any text with span
-      let currentChild = innerText.firstChild;
+      let currentChild = innerTextWrapper.firstChild;
       while (currentChild) {
         if (currentChild.nodeType === Node.TEXT_NODE) {
           const wrapper = document.createElement("span");
           wrapper.textContent = currentChild.textContent;
-          innerText.replaceChild(wrapper, currentChild);
+          innerTextWrapper.replaceChild(wrapper, currentChild);
 
           currentChild = wrapper;
         }
@@ -329,7 +331,7 @@ export class HunkLinesHandler {
 
       linePlaceholder[lineNumber] = [];
 
-      currentChild = innerText.firstChild;
+      currentChild = innerTextWrapper.firstChild;
       let lineOffset = 0;
       while (currentChild) {
         const childElement = currentChild as HTMLElement;

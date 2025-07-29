@@ -7,6 +7,7 @@ import { compact } from "lodash";
 
 export class TraversalComponent extends BaseNode {
   declare node: TraversalComponentJson | ClusterJson | RootJson;
+  private dependenciesCache: BaseNode[] | null = null;
 
   constructor(node: TraversalComponentJson | ClusterJson | RootJson) {
     super(node);
@@ -62,18 +63,14 @@ export class TraversalComponent extends BaseNode {
       return;
     }
 
-    const children = nodesStore.edges
-      .filter(
-        (edge) => edge.type === "EXPANSION" && edge.sourceId === this.node.id,
-      )
-      .map((edge) => nodesStore.getNodeById(edge.targetId));
+    const children = this.getDependencies(nodesStore);
+    // TODO: make it batch
     for (const child of children) {
       await child.wrappedDescribeNode(nodesStore, {
         force: options?.force,
-        parentsToSet:
-          children.length === 1
-            ? [...(options?.parentsToSet ?? []), this.node.id]
-            : options?.parentsToSet,
+        parentsToSet: this.shouldGenerate(nodesStore)
+          ? undefined
+          : [...(options?.parentsToSet ?? []), this.node.id],
       });
     }
     const childrenDescription = compact(
@@ -95,5 +92,24 @@ export class TraversalComponent extends BaseNode {
     await this.streamField("description", generator, options?.parentsToSet);
 
     await this.entitle();
+  }
+
+  getDependencies(nodesStore: NodesStore): BaseNode[] {
+    if (this.dependenciesCache) {
+      return this.dependenciesCache;
+    }
+
+    this.dependenciesCache = nodesStore.edges
+      .filter(
+        (edge) => edge.type === "EXPANSION" && edge.sourceId === this.node.id,
+      )
+      .map((edge) => nodesStore.getNodeById(edge.targetId));
+
+    return this.dependenciesCache;
+  }
+
+  shouldGenerate(nodesStore: NodesStore): boolean {
+    const children = this.getDependencies(nodesStore);
+    return children.length > 1;
   }
 }

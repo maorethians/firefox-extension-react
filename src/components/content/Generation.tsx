@@ -32,22 +32,6 @@ export const Generation: React.FC<{
 }> = ({ url }) => {
   const evaluation = new Evaluation(url);
 
-  const generationProcess = useGenerationProcess(
-    (state) => state.generationProcess,
-  );
-  const inGenerationNodes = Object.values(generationProcess).filter(
-    (generation) => generation,
-  ).length;
-  const [maxGenerationNodes, setMaxGenerationNodes] = useState(0);
-  useEffect(() => {
-    if (maxGenerationNodes < inGenerationNodes) {
-      setMaxGenerationNodes(inGenerationNodes);
-    }
-    if (inGenerationNodes === 0) {
-      setMaxGenerationNodes(inGenerationNodes);
-    }
-  }, [inGenerationNodes]);
-
   const subjectId = useSubjectId((state) => state.subjectId);
   const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
   const id = subjectHunkId ?? subjectId;
@@ -64,7 +48,6 @@ export const Generation: React.FC<{
     }
 
     const node = nodesStore.getNodeById(id).node;
-
     if (!description) {
       setDescription(id, node?.description ?? "");
     }
@@ -82,6 +65,16 @@ export const Generation: React.FC<{
     return;
   }
 
+  const generationProcess = useGenerationProcess(
+    (state) => state.generationProcess[id],
+  );
+  const allDependencies = nodesStore
+    .getNodeById(id)
+    .getDependencyGraphNodesId(nodesStore);
+  const remainingDependencies = generationProcess?.remainingDependencies;
+  const generationProcessState = generationProcess?.state;
+  console.log(generationProcessState);
+
   return (
     <div style={{ color, width: "100%" }}>
       <div
@@ -92,7 +85,7 @@ export const Generation: React.FC<{
         }}
       >
         <IconButton
-          loading={generationProcess[id]}
+          loading={generationProcessState === "waiting"}
           style={{ height: "55px" }}
           onClick={async () => {
             await nodesStore.describeNode(id, {
@@ -184,16 +177,17 @@ export const Generation: React.FC<{
           </IconButton>
         )}
 
-        {maxGenerationNodes > 0 &&
-          (maxGenerationNodes - inGenerationNodes === 0 ? (
+        {generationProcessState === "waiting" &&
+          (remainingDependencies?.length === allDependencies.length ||
+          remainingDependencies?.length === 0 ? (
             <CircularProgress />
           ) : (
             <CircularProgress
               variant="determinate"
               value={
-                ((maxGenerationNodes - inGenerationNodes) /
-                  maxGenerationNodes) *
-                100
+                (100 *
+                  (allDependencies.length - remainingDependencies.length)) /
+                allDependencies.length
               }
             />
           ))}

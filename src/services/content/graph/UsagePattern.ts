@@ -3,11 +3,13 @@ import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
-import { compact, partition } from "lodash";
+import { compact } from "lodash";
 import { useAgentic } from "@/services/content/useAgentic.ts";
 
 export class UsagePattern extends BaseNode {
   declare node: UsagePatternJson;
+  private usedNodesCache: (Hunk | UsagePattern)[] | null = null;
+  private useHunksCache: Hunk[] | null = null;
 
   constructor(node: UsagePatternJson) {
     super(node);
@@ -86,25 +88,7 @@ export class UsagePattern extends BaseNode {
       return;
     }
 
-    const useHunks = nodesStore.edges
-      .filter((edge) => edge.type === "DEF_USE")
-      .map((edge) => nodesStore.getNodeById(edge.targetId))
-      .filter(({ node }) => node.aggregatorIds.includes(this.node.id))
-      .filter(({ node }) => isHunk(node)) as Hunk[];
-    const useNodesId = useHunks.map((useNode) => useNode.node.id);
-
-    const usedNodes = nodesStore.edges
-      .filter(
-        (edge) => edge.type === "DEF_USE" && useNodesId.includes(edge.targetId),
-      )
-      .map(
-        (edge) => nodesStore.getNodeById(edge.sourceId) as Hunk | UsagePattern,
-      );
-
-    const [usedUsagePatterns, usedHunks] = partition(usedNodes, ({ node }) =>
-      isAggregator(node),
-    ) as [UsagePattern[], Hunk[]];
-
+    const usedUsagePatterns = this.getDependencies(nodesStore);
     for (const usagePattern of usedUsagePatterns) {
       await usagePattern.wrappedDescribeNode(nodesStore, {
         force: options?.force,
@@ -114,7 +98,11 @@ export class UsagePattern extends BaseNode {
       usedUsagePatterns.map((usagePattern) => usagePattern.node.description),
     );
 
+    const useHunks = this.getUseHunks(nodesStore);
     const useNode = useHunks[0];
+    const usedHunks = this.getUsedNodes(nodesStore).filter(({ node }) =>
+      isHunk(node),
+    ) as Hunk[];
     const mainHunks = useNode.nodeType !== "EXTENSION" ? useHunks : usedHunks;
     const hunksSemanticContexts = mainHunks.map((hunk) =>
       hunk.getSemanticContexts(nodesStore),
@@ -150,5 +138,47 @@ export class UsagePattern extends BaseNode {
     await this.streamField("description", generator, options?.parentsToSet);
 
     await this.entitle();
+  }
+
+  getUseHunks(nodesStore: NodesStore) {
+    if (this.useHunksCache) {
+      return this.useHunksCache;
+    }
+
+    this.useHunksCache = nodesStore.edges
+      .filter((edge) => edge.type === "DEF_USE")
+      .map((edge) => nodesStore.getNodeById(edge.targetId))
+      .filter(({ node }) => node.aggregatorIds.includes(this.node.id))
+      .filter(({ node }) => isHunk(node)) as Hunk[];
+
+    return this.useHunksCache;
+  }
+
+  getUsedNodes(nodesStore: NodesStore) {
+    if (this.usedNodesCache) {
+      return this.usedNodesCache;
+    }
+
+    const useHunks = this.getUseHunks(nodesStore);
+    const useNodesId = useHunks.map((useNode) => useNode.node.id);
+
+    this.usedNodesCache = nodesStore.edges
+      .filter(
+        (edge) => edge.type === "DEF_USE" && useNodesId.includes(edge.targetId),
+      )
+      .map(
+        (edge) => nodesStore.getNodeById(edge.sourceId) as Hunk | UsagePattern,
+      );
+
+    return this.usedNodesCache;
+  }
+
+  getDependencies(nodesStore: NodesStore): BaseNode[] {
+    const usedNodes = this.getUsedNodes(nodesStore);
+    return usedNodes.filter(({ node }) => isAggregator(node));
+  }
+
+  shouldGenerate(_nodesStore: NodesStore): boolean {
+    return true;
   }
 }

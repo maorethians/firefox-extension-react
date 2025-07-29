@@ -76,4 +76,8 @@ export class SimilarityPattern extends BaseNode {
 
     await this.entitle();
   }
+
+  shouldGenerate(_nodesStore: NodesStore): boolean {
+    return true;
+  }
 }

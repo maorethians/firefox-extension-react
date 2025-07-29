@@ -21,14 +21,11 @@ export class SingularPattern extends BaseNode {
       return;
     }
 
-    const leadEdge = nodesStore.edges.filter(
-      (edge) => edge.type === "EXPANSION" && edge.sourceId === this.node.id,
-    )[0];
-    if (!leadEdge) {
+    const lead = this.getDependencies(nodesStore)[0];
+    if (!lead) {
       return;
     }
 
-    const lead = nodesStore.getNodeById(leadEdge.targetId);
     await lead.wrappedDescribeNode(nodesStore, {
       force: options?.force,
       parentsToSet: [...(options?.parentsToSet ?? []), this.node.id],
@@ -36,5 +33,17 @@ export class SingularPattern extends BaseNode {
     this.node.description = lead.node.description;
 
     await this.entitle();
+  }
+
+  getDependencies(nodesStore: NodesStore): BaseNode[] {
+    const leadEdge = nodesStore.edges.filter(
+      (edge) => edge.type === "EXPANSION" && edge.sourceId === this.node.id,
+    )[0];
+    if (!leadEdge) {
+      return [];
+    }
+
+    const lead = nodesStore.getNodeById(leadEdge.targetId);
+    return [lead];
   }
 }

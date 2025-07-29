@@ -7,7 +7,10 @@ import { ChainValues } from "@@/node_modules/@langchain/core/dist/utils/types";
 import { tool } from "@langchain/core/tools";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { useGenerationProcess } from "@/services/content/useGenerationProcess.ts";
+import {
+  ProcessState,
+  useGenerationProcess,
+} from "@/services/content/useGenerationProcess.ts";
 import { useDescription } from "@/services/content/useDescription.ts";
 import { useTitle } from "@/services/content/useTitle.ts";
 
@@ -16,6 +19,7 @@ export const store: Record<string, number> = {};
 export abstract class BaseNode {
   node: UnifiedNodeJson;
   nodeType: NodeType;
+  private dependencyGraphNodesIdCache: string[] | null = null;
 
   protected constructor(node: UnifiedNodeJson) {
     this.node = node;
@@ -73,6 +77,49 @@ export abstract class BaseNode {
     },
   ): Promise<void> {}
 
+  getDependencies(_nodesStore: NodesStore): BaseNode[] {
+    return [];
+  }
+
+  getDependencyGraphNodesId(nodesStore: NodesStore): string[] {
+    if (this.dependencyGraphNodesIdCache) {
+      return this.dependencyGraphNodesIdCache;
+    }
+
+    const result = new Set<string>();
+
+    const stack: string[] = [
+      ...this.getDependencies(nodesStore).map(({ node }) => node.id),
+    ];
+    const seen: string[] = [];
+    while (stack.length > 0) {
+      const subjectId = stack.pop()!;
+      if (seen.includes(subjectId)) {
+        continue;
+      }
+
+      const subject = nodesStore.getNodeById(subjectId);
+
+      if (subject.shouldGenerate(nodesStore)) {
+        result.add(subjectId);
+      }
+
+      const dependencies = subject.getDependencies(nodesStore);
+      for (const { node: dependency } of dependencies) {
+        if (seen.includes(dependency.id)) {
+          continue;
+        }
+
+        stack.push(dependency.id);
+      }
+
+      seen.push(subjectId);
+    }
+
+    this.dependencyGraphNodesIdCache = Array.from(result);
+    return this.dependencyGraphNodesIdCache;
+  }
+
   async wrappedDescribeNode(
     nodesStore: NodesStore,
     options?: {
@@ -80,13 +127,13 @@ export abstract class BaseNode {
       parentsToSet?: string[];
     },
   ) {
-    this.setGenerationProcess(true);
+    this.setGenerationProcess("waiting", nodesStore);
 
     try {
       await this.describeNode(nodesStore, options);
     } catch (e) {}
 
-    this.setGenerationProcess(false);
+    this.setGenerationProcess("result", nodesStore);
   }
 
   async entitle(force?: boolean): Promise<void> {
@@ -111,11 +158,10 @@ export abstract class BaseNode {
     return this.node;
   }
 
-  setGenerationProcess = (processState: boolean) => {
+  setGenerationProcess = (state: ProcessState, nodesStore: NodesStore) =>
     useGenerationProcess
       .getState()
-      .setGenerationProcess(this.node.id, processState);
-  };
+      .setGenerationProcess(this.node.id, state, nodesStore);
 
   async streamField(
     fieldKey: "description" | "title",
@@ -161,5 +207,9 @@ export abstract class BaseNode {
         setter?.(this.node[fieldKey]);
       }
     }
+  }
+
+  shouldGenerate(_nodesStore: NodesStore): boolean {
+    return false;
   }
 }
