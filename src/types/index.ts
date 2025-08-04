@@ -19,13 +19,16 @@ export type NodeType =
 export type HunkJson = BaseNodeJson & {
   path: string;
   content: string;
+  promptId?: string;
+  identifiers?: string[];
   srcs?: {
     path: string;
     content: string;
+    promptId?: string;
     contexts: {
       content: string;
       nodeType: NodeType;
-    };
+    }[];
     startLine: number;
     startLineOffset: number;
     endLine: number;

@@ -5,7 +5,6 @@ import { AIMessageChunk } from "@langchain/core/messages";
 import { IterableReadableStream } from "@@/node_modules/@langchain/core/dist/utils/stream";
 import { ChainValues } from "@@/node_modules/@langchain/core/dist/utils/types";
 import { tool } from "@langchain/core/tools";
-import { nanoid } from "nanoid";
 import { z } from "zod";
 import {
   ProcessState,
@@ -13,8 +12,7 @@ import {
 } from "@/services/content/useGenerationProcess.ts";
 import { useDescription } from "@/services/content/useDescription.ts";
 import { useTitle } from "@/services/content/useTitle.ts";
-
-export const store: Record<string, number> = {};
+import { keyBy } from "lodash";
 
 export abstract class BaseNode {
   node: UnifiedNodeJson;
@@ -27,52 +25,82 @@ export abstract class BaseNode {
   }
 
   tools = {
-    description: (surroundings: string[]) => {
-      const randomString = nanoid();
-      store[randomString] = surroundings.length;
+    description: (idSurroundings: { id: string; surroundings: string[] }[]) => {
+      if (idSurroundings.length === 0) {
+        return;
+      }
+
+      const idSurroundingsIndex = keyBy(
+        idSurroundings.map(({ id, surroundings }) => ({
+          id,
+          surroundings,
+          index: 0,
+        })),
+        "id",
+      );
 
       return tool(
-        () => {
-          const remainingIterations = store[randomString];
-          if (remainingIterations === 0) {
-            return "There is no more context extension.";
-          }
+        // TODO: should accept multiple ids
+        ({ ids }) =>
+          ids
+            .map((id) => {
+              const { surroundings, index } = idSurroundingsIndex[id];
 
-          store[randomString] = remainingIterations - 1;
+              let result =
+                "{ id: " +
+                id +
+                ", expansionSteps: " +
+                (index + 1) +
+                "/" +
+                surroundings.length +
+                " }\n";
 
-          const index = surroundings.length - remainingIterations;
-          return (
-            "# Surrounding:\n---\n" +
-            surroundings[index] +
-            "\n---\n\n# Remaining Expansions:" +
-            remainingIterations
-          );
-        },
+              if (index === surroundings.length) {
+                result += "Reached expansion limit for this code.";
+                return result;
+              }
+
+              result += surroundings[index];
+
+              idSurroundingsIndex[id].index = index + 1;
+
+              console.log(result);
+
+              return result;
+            })
+            .join("\n---\n"),
         {
           name: "getSurrounding",
           description:
-            "Returns the code or change along with its surrounding context to support better understanding.\n Each" +
-            " time the tool is called, it expands the surrounding boundaries, providing progressively broader" +
-            " visibility into the code or change location.",
-          schema: z.object({}),
+            "Returns the code together with its surrounding to support better understanding. Each time the tool is" +
+            " called, it expands the surrounding boundaries, providing progressively broader visibility into the" +
+            " code location. The number of expansion steps is limited for each code and the tool is unable to expand" +
+            " boundaries further when you reach that limit.",
+          schema: z.object({
+            ids: z.array(
+              z.enum(
+                idSurroundings.map(({ id }) => id) as [string, ...string[]],
+              ),
+            ),
+          }),
         },
       );
     },
   };
 
-  promptTemplates: Record<string, (...args: any[]) => string> = {};
+  promptTemplates: Record<string, (...args: any[]) => Promise<string>> = {};
 
-  _basePromptTemplates: typeof this.promptTemplates = {
+  _basePromptTemplates = {
     title: (description: string) =>
-      "# Description:\n---\n" +
+      "# Description:\n\`\`\`\n" +
       description +
-      "\n---\n\n# Task:\n---\nGenerate a concise phrase as the title of the description.\n---",
+      "\n\`\`\`\n\n# Task:\n\`\`\`\nGenerate a concise phrase as the title of the description.\n\`\`\`",
   };
 
   async describeNode(
     _nodesStore: NodesStore,
     _options?: {
-      force?: boolean;
+      invalidateCache?: boolean;
       parentsToSet?: string[];
     },
   ): Promise<void> {}
@@ -123,7 +151,7 @@ export abstract class BaseNode {
   async wrappedDescribeNode(
     nodesStore: NodesStore,
     options?: {
-      force?: boolean;
+      invalidateCache?: boolean;
       parentsToSet?: string[];
     },
   ) {
@@ -136,9 +164,9 @@ export abstract class BaseNode {
     this.setGenerationProcess("result", nodesStore);
   }
 
-  async entitle(force?: boolean): Promise<void> {
+  async entitle(): Promise<void> {
     const titleCache = this.node.title;
-    if (titleCache && !force) {
+    if (titleCache) {
       return;
     }
 

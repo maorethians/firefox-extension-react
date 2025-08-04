@@ -12,40 +12,39 @@ export class SimilarityPattern extends BaseNode {
   }
 
   promptTemplates = {
-    base: (probeNode: Hunk, nodesStore: NodesStore) =>
-      probeNode.promptTemplates.base(nodesStore),
-    description: (
-      probeNode: Hunk,
-      contextStrings: string[],
-      nodesStore: NodesStore,
-    ) => {
-      let result =
-        "# Change:\n---\n" +
-        this.promptTemplates.base(probeNode, nodesStore) +
-        "\n---";
+    base: async (similarHunks: Hunk[], nodesStore: NodesStore) =>
+      (
+        await Promise.all(
+          similarHunks.map((hunk) => hunk.promptTemplates.base(nodesStore)),
+        )
+      ).join("\n---\n"),
+    description: async (similarHunks: Hunk[], nodesStore: NodesStore) => {
+      const basePrompt = await this.promptTemplates.base(
+        similarHunks,
+        nodesStore,
+      );
 
-      result +=
-        "\n\n# Locations Affected:\n---\n" +
-        contextStrings.map((contextString) => "- " + contextString).join("\n") +
-        "\n---";
+      let prompt = "# Change:\n\`\`\`\n" + basePrompt + "\n\`\`\`";
 
-      result +=
-        "\n\n# Task:\n---\nProvide an explanation focusing on the specific and evident purposes of applying this" +
-        " same change across these locations.\n---";
+      prompt +=
+        "\n\n# Task:\n\`\`\`\nProvide an explanation focusing on the specific and evident purposes of applying this" +
+        " same change across these locations.\n\`\`\`\n\n# Guidelines:\n\`\`\`\n- Make explicit references to code" +
+        " elements, identifiers, and code ids in your explanation to ensure clarity and help connect the explanation" +
+        " to the code.\n\`\`\`";
 
-      return result;
+      return prompt;
     },
   };
 
   async describeNode(
     nodesStore: NodesStore,
     options?: {
-      force?: boolean;
+      invalidateCache?: boolean;
       parentsToSet?: string[];
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
-    if (descriptionCache && !options?.force) {
+    if (descriptionCache && !options?.invalidateCache) {
       return;
     }
 
@@ -61,16 +60,19 @@ export class SimilarityPattern extends BaseNode {
     const similarNodes = similarNodesId.map(
       (id) => nodesStore.getNodeById(id) as Hunk,
     );
-    const contextStrings = similarNodes.map(
-      (node) => node.getHunk(nodesStore).context,
-    );
 
+    const prompt = await this.promptTemplates.description(
+      similarNodes,
+      nodesStore,
+    );
+    const surroundings = (
+      await Promise.all(
+        similarNodes.map((hunk) => hunk.getSurroundings(nodesStore)),
+      )
+    ).flat();
     const generator = await LLMClient.stream(
-      this.promptTemplates.description(
-        similarNodes[0],
-        contextStrings,
-        nodesStore,
-      ),
+      prompt,
+      this.tools.description(surroundings),
     );
     await this.streamField("description", generator, options?.parentsToSet);
 

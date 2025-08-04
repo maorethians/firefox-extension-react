@@ -12,12 +12,12 @@ export class SingularPattern extends BaseNode {
   async describeNode(
     nodesStore: NodesStore,
     options?: {
-      force?: boolean;
+      invalidateCache?: boolean;
       parentsToSet?: string[];
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
-    if (descriptionCache && !options?.force) {
+    if (descriptionCache && !options?.invalidateCache) {
       return;
     }
 
@@ -27,7 +27,7 @@ export class SingularPattern extends BaseNode {
     }
 
     await lead.wrappedDescribeNode(nodesStore, {
-      force: options?.force,
+      invalidateCache: options?.invalidateCache,
       parentsToSet: [...(options?.parentsToSet ?? []), this.node.id],
     });
     this.node.description = lead.node.description;

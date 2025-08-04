@@ -4,7 +4,6 @@ import { colors } from "@/public/colors.ts";
 import { CircularProgress, IconButton } from "@mui/material";
 import { useGenerationProcess } from "@/services/content/useGenerationProcess.ts";
 import { useAdvanced } from "@/services/content/useAdvanced.ts";
-import { useAgentic } from "@/services/content/useAgentic.ts";
 import { useDescription } from "@/services/content/useDescription.ts";
 import ReactMarkdown from "react-markdown";
 // @ts-ignore
@@ -13,10 +12,6 @@ import Generate from "../../public/generate.svg?react";
 import Advanced from "../../public/advanced.svg?react";
 // @ts-ignore
 import Simple from "../../public/simple.svg?react";
-// @ts-ignore
-import Agentic from "../../public/agentic.svg?react";
-// @ts-ignore
-import Gear from "../../public/gear.svg?react";
 // @ts-ignore
 import ThumbsUp from "../../public/thumbs-up.svg?react";
 // @ts-ignore
@@ -55,8 +50,6 @@ export const Generation: React.FC<{
 
   const isAdvanced = useAdvanced((state) => state.isAdvanced);
   const setAdvanced = useAdvanced((state) => state.setAdvanced);
-  const isAgentic = useAgentic((state) => state.isAgentic);
-  const setAgentic = useAgentic((state) => state.setAgentic);
 
   const colorMode = useColorMode((state) => state.colorMode);
   const color = colors.HUNK.AGGREGATOR[colorMode === "DARK" ? "LIGHT" : "DARK"];
@@ -73,7 +66,6 @@ export const Generation: React.FC<{
     .getDependencyGraphNodesId(nodesStore);
   const remainingDependencies = generationProcess?.remainingDependencies;
   const generationProcessState = generationProcess?.state;
-  console.log(generationProcessState);
 
   return (
     <div style={{ color, width: "100%" }}>
@@ -88,12 +80,12 @@ export const Generation: React.FC<{
           loading={generationProcessState === "waiting"}
           style={{ height: "55px" }}
           onClick={async () => {
-            await nodesStore.describeNode(id, {
-              force: true,
+            const node = nodesStore!.getNodeById(id);
+            await node.wrappedDescribeNode(nodesStore, {
+              invalidateCache: true,
             });
-            await nodesStore.entitleNode(id, true);
 
-            await nodesStore.updateStorage();
+            await nodesStore!.updateStorage();
           }}
         >
           <Generate
@@ -118,28 +110,6 @@ export const Generation: React.FC<{
             />
           ) : (
             <Simple
-              style={{
-                color,
-                width: "100%",
-                height: "100%",
-              }}
-            />
-          )}
-        </IconButton>
-        <IconButton
-          style={{ height: "35px" }}
-          onClick={() => setAgentic(!isAgentic)}
-        >
-          {isAgentic ? (
-            <Agentic
-              style={{
-                color,
-                width: "100%",
-                height: "100%",
-              }}
-            />
-          ) : (
-            <Gear
               style={{
                 color,
                 width: "100%",

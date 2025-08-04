@@ -3,8 +3,8 @@ import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
+import uniqueBy from "@popperjs/core/lib/utils/uniqueBy";
 import { compact } from "lodash";
-import { useAgentic } from "@/services/content/useAgentic.ts";
 
 export class UsagePattern extends BaseNode {
   declare node: UsagePatternJson;
@@ -16,124 +16,109 @@ export class UsagePattern extends BaseNode {
   }
 
   promptTemplates = {
-    base: (
+    description: async (
       useHunks: Hunk[],
       usedHunks: Hunk[],
-      usageDescriptions: string[],
+      // TODO: any reference to a code id can be made agentic
+      usagePatterns: { description: string; identifiers: string[] }[],
       nodesStore: NodesStore,
     ) => {
-      const useHunk = useHunks[0];
+      const hasExtension = useHunks[0].nodeType === "EXTENSION";
 
-      const main = (useHunk.nodeType !== "EXTENSION" ? useHunks : usedHunks)
-        .map((usedHunk) =>
-          usedHunk.promptTemplates.contextualizedBase(nodesStore),
-        )
-        .join("\n---\n");
+      const mainHunks = hasExtension ? usedHunks : useHunks;
+      const sideHunks = hasExtension ? useHunks : usedHunks;
 
-      let context;
-      if (useHunk.nodeType === "EXTENSION") {
-        context = useHunk.promptTemplates.contextualizedBase(nodesStore);
-      } else {
-        const usedContents = usedHunks.map((usedHunk) =>
-          usedHunk.promptTemplates.contextualizedBase(nodesStore),
-        );
+      let prompt =
+        "# Change:\n\`\`\`\n" +
+        (
+          await Promise.all(
+            mainHunks.map((hunk) => hunk.promptTemplates.base(nodesStore)),
+          )
+        ).join("\n---\n") +
+        "\n\`\`\`\n\n# Context:\n\`\`\`\n" +
+        (
+          await Promise.all(
+            sideHunks.map((hunk) => hunk.promptTemplates.base(nodesStore)),
+          )
+        ).join("\n---\n");
 
-        context = [...usedContents, ...usageDescriptions].join("\n---\n");
+      if (usagePatterns.length > 0) {
+        prompt +=
+          "\n---\n" +
+          usagePatterns
+            .map(
+              (usagePattern) =>
+                "{ identifiers: " +
+                usagePattern.identifiers.join(", ") +
+                " }\n" +
+                usagePattern.description,
+            )
+            .join("\n---\n");
       }
 
-      return (
-        "# Code:\n---\n" +
-        main +
-        "\n---\n\n# Context:\n---\n" +
-        context +
-        "\n---"
-      );
-    },
-    description: (
-      useHunks: Hunk[],
-      usedHunks: Hunk[],
-      usageDescriptions: string[],
-      nodesStore: NodesStore,
-    ) => {
-      let result = this.promptTemplates.base(
-        useHunks,
-        usedHunks,
-        usageDescriptions,
-        nodesStore,
-      );
+      prompt += "\n\`\`\`";
 
-      result +=
-        "\n\n# Task:\n---\nProvide an explanation focusing on the specific and evident purposes of the given code," +
-        " using the provided context as needed.\n---\n\n# Guidelines:\n---\n- The given code may be either a pure" +
-        " code snippet or a transition (with Before/After sections).\n- The provided contexts contain information" +
-        " about the identifiers being used in the given code, which can also be a pure code, a code transition, or" +
-        " an explanation in natural language.\n- For pure code, focus on its purpose and behavior as-is.\n-" +
-        " For transitions, focus on what is added, removed, or modified, and the specific evident purposes behind" +
-        " those changes.\n- Avoid focusing on unchanged parts of the transitions, unless needed to clarify the" +
-        " changes.\n- Refer to code elements and identifiers in your explanation to ensure clarity.\n---";
+      prompt +=
+        "\n\n# Task:\n\`\`\`\nProvide an explanation focusing on the specific and evident purposes of the given" +
+        " change. \n\`\`\`\n\n# Guidelines:\n\`\`\`\n- Context contains pure code or explanatory content related to" +
+        " identifiers used in the change.\n- Keep the explanation focused on the change itself. Refer to the" +
+        " context only when needed to clarify identifiers or reasoning.\n- Do not summarize or paraphrase the" +
+        " context unless directly relevant to understanding the change.\n- Make explicit references to code" +
+        " elements, identifiers, and code ids in your explanation to ensure clarity and help connect the" +
+        " explanation to the code.\n\`\`\`";
 
-      return result;
+      return prompt;
     },
   };
 
   async describeNode(
     nodesStore: NodesStore,
     options?: {
-      force?: boolean;
+      invalidateCache?: boolean;
       parentsToSet?: string[];
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
-    if (descriptionCache && !options?.force) {
+    if (descriptionCache && !options?.invalidateCache) {
       return;
     }
 
     const usedUsagePatterns = this.getDependencies(nodesStore);
     for (const usagePattern of usedUsagePatterns) {
-      await usagePattern.wrappedDescribeNode(nodesStore, {
-        force: options?.force,
-      });
+      await usagePattern.wrappedDescribeNode(nodesStore);
     }
-    const usageDescriptions = compact(
-      usedUsagePatterns.map((usagePattern) => usagePattern.node.description),
-    );
+    const usedUsagePatternsDetail = usedUsagePatterns
+      .filter((usagePattern) => usagePattern.node.description)
+      .map((usagePattern) => ({
+        description: usagePattern.node.description!,
+        identifiers: compact(
+          usagePattern
+            .getUseHunks(nodesStore)
+            .map((hunk) => hunk.node.identifiers),
+        ).flat(),
+      }));
 
     const useHunks = this.getUseHunks(nodesStore);
-    const useNode = useHunks[0];
     const usedHunks = this.getUsedNodes(nodesStore).filter(({ node }) =>
       isHunk(node),
     ) as Hunk[];
-    const mainHunks = useNode.nodeType !== "EXTENSION" ? useHunks : usedHunks;
-    const hunksSemanticContexts = mainHunks.map((hunk) =>
-      hunk.getSemanticContexts(nodesStore),
+
+    const prompt = await this.promptTemplates.description(
+      useHunks,
+      usedHunks,
+      usedUsagePatternsDetail,
+      nodesStore,
     );
-
-    const semanticContexts: string[] = [];
-    let index = -1;
-    while (true) {
-      const semanticContext = hunksSemanticContexts.map(
-        (hunkSemanticContexts) => hunkSemanticContexts[++index],
-      );
-      if (semanticContext.length > compact(semanticContext).length) {
-        break;
-      }
-
-      const semanticContextContent = semanticContext.map(
-        (sc) => sc.getHunk(nodesStore).content,
-      );
-      semanticContexts.push(semanticContextContent.join("\n---\n"));
-    }
-
+    const surroundings = (
+      await Promise.all(
+        [...useHunks, ...usedHunks].map((hunk) =>
+          hunk.getSurroundings(nodesStore),
+        ),
+      )
+    ).flat();
     const generator = await LLMClient.stream(
-      this.promptTemplates.description(
-        useHunks,
-        usedHunks,
-        usageDescriptions,
-        nodesStore,
-      ),
-      useAgentic.getState().isAgentic && semanticContexts.length > 0
-        ? [this.tools.description(semanticContexts)]
-        : undefined,
+      prompt,
+      this.tools.description(surroundings),
     );
     await this.streamField("description", generator, options?.parentsToSet);
 
@@ -145,11 +130,12 @@ export class UsagePattern extends BaseNode {
       return this.useHunksCache;
     }
 
-    this.useHunksCache = nodesStore.edges
+    const useHunks = nodesStore.edges
       .filter((edge) => edge.type === "DEF_USE")
       .map((edge) => nodesStore.getNodeById(edge.targetId))
       .filter(({ node }) => node.aggregatorIds.includes(this.node.id))
       .filter(({ node }) => isHunk(node)) as Hunk[];
+    this.useHunksCache = uniqueBy(useHunks, (useHunk) => useHunk.node.id);
 
     return this.useHunksCache;
   }
@@ -160,22 +146,23 @@ export class UsagePattern extends BaseNode {
     }
 
     const useHunks = this.getUseHunks(nodesStore);
-    const useNodesId = useHunks.map((useNode) => useNode.node.id);
+    const useHunksId = useHunks.map((useNode) => useNode.node.id);
 
-    this.usedNodesCache = nodesStore.edges
+    const usedNodes = nodesStore.edges
       .filter(
-        (edge) => edge.type === "DEF_USE" && useNodesId.includes(edge.targetId),
+        (edge) => edge.type === "DEF_USE" && useHunksId.includes(edge.targetId),
       )
       .map(
         (edge) => nodesStore.getNodeById(edge.sourceId) as Hunk | UsagePattern,
       );
+    this.usedNodesCache = uniqueBy(usedNodes, (useNode) => useNode.node.id);
 
     return this.usedNodesCache;
   }
 
-  getDependencies(nodesStore: NodesStore): BaseNode[] {
+  getDependencies(nodesStore: NodesStore) {
     const usedNodes = this.getUsedNodes(nodesStore);
-    return usedNodes.filter(({ node }) => isAggregator(node));
+    return usedNodes.filter(({ node }) => isAggregator(node)) as UsagePattern[];
   }
 
   shouldGenerate(_nodesStore: NodesStore): boolean {

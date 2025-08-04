@@ -2,72 +2,175 @@ import { HunkJson } from "@/types";
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
-import { useAgentic } from "@/services/content/useAgentic.ts";
-import { compact } from "lodash";
+import { compact, partition } from "lodash";
+import { nanoid } from "nanoid";
+
+type AIDetail = {
+  id: string;
+  surroundings: string[];
+  content: string;
+  contextString: string;
+};
 
 export class Hunk extends BaseNode {
   declare node: HunkJson;
   contexts: Hunk[] | undefined;
+  private detailCache: AIDetail | undefined;
+  private srcsDetailCache: AIDetail[] | null | undefined;
+  private surroundingsCache:
+    | { id: string; surroundings: string[] }[]
+    | undefined;
 
   constructor(node: HunkJson) {
     super(node);
   }
 
+  async getDetail(nodesStore: NodesStore) {
+    if (this.detailCache) {
+      return this.detailCache;
+    }
+
+    if (!this.node.promptId) {
+      this.node.promptId = "code_" + nanoid(4);
+      await nodesStore.updateStorage();
+    }
+
+    this.detailCache = {
+      id: this.node.promptId,
+      content: this.node.content,
+      contextString: this.getContextString(nodesStore),
+      surroundings: this.getContexts(nodesStore)
+        .filter((context) => context.nodeType === "SEMANTIC_CONTEXT")
+        .map((context) => context.node.content),
+    };
+
+    return this.detailCache;
+  }
+
+  async getSrcsDetail(nodesStore: NodesStore) {
+    if (!this.node.srcs) {
+      this.srcsDetailCache = null;
+      return null;
+    }
+
+    if (this.srcsDetailCache) {
+      return this.srcsDetailCache;
+    }
+
+    let shouldUpdateStorage = false;
+    const srcsDetail: AIDetail[] = [];
+    for (const src of this.node.srcs) {
+      if (!src.promptId) {
+        src.promptId = "code_" + nanoid(4);
+        shouldUpdateStorage = true;
+      }
+
+      const [locationContexts, semanticContext] = partition(
+        src.contexts,
+        (context) => context.nodeType === "LOCATION_CONTEXT",
+      );
+
+      srcsDetail.push({
+        id: src.promptId,
+        content: src.content,
+        contextString: this.representContextString(
+          locationContexts.map((context) => context.content),
+        ),
+        surroundings: semanticContext.map((context) => context.content),
+      });
+    }
+
+    if (shouldUpdateStorage) {
+      await nodesStore.updateStorage();
+    }
+
+    this.srcsDetailCache = srcsDetail;
+    return this.srcsDetailCache;
+  }
+
+  async getSurroundings(nodesStore: NodesStore) {
+    if (this.surroundingsCache) {
+      return this.surroundingsCache;
+    }
+
+    const surroundings: {
+      id: string;
+      surroundings: string[];
+    }[] = [];
+
+    const detail = await this.getDetail(nodesStore);
+    surroundings.push({ id: detail.id, surroundings: detail.surroundings });
+
+    const srcsDetail = await this.getSrcsDetail(nodesStore);
+    if (srcsDetail) {
+      for (const srcDetail of srcsDetail) {
+        surroundings.push({
+          id: srcDetail.id,
+          surroundings: srcDetail.surroundings,
+        });
+      }
+    }
+
+    this.surroundingsCache = surroundings;
+    return this.surroundingsCache;
+  }
+
   promptTemplates = {
-    base: (nodesStore: NodesStore) => {
-      const hunk = this.getHunk(nodesStore);
-      return hunk.src
-        ? "## Before:\n" + hunk.src + "\n\n## After:\n" + hunk.content
-        : hunk.content;
-    },
-    contextualizedBase: (nodesStore: NodesStore) => {
-      const hunk = this.getHunk(nodesStore);
-      return hunk.src
-        ? "## Before:\n" +
-            hunk.src +
-            "\n\n## After:\n(" +
-            hunk.context +
-            ")\n" +
-            hunk.content
-        : "(" + hunk.context + ")\n" + hunk.content;
-    },
-    description: (aggregatorsDescription: string[], nodesStore: NodesStore) => {
-      const base = this.promptTemplates.contextualizedBase(nodesStore);
+    base: async (nodesStore: NodesStore) => {
+      let prompt = "";
 
-      const hunk = this.getHunk(nodesStore);
+      const srcsDetail = await this.getSrcsDetail(nodesStore);
+      if (srcsDetail) {
+        prompt += srcsDetail
+          .map(({ id, contextString, content }) => {
+            let subPrompt = "{ id: " + id;
+            if (contextString) {
+              subPrompt += ", location: " + contextString;
+            }
+            subPrompt += " }\n";
+            subPrompt += content;
 
-      let result =
-        `# ${hunk.src ? "Change" : "Code"}:\n---\n` + base + "\n---\n";
+            return subPrompt;
+          })
+          .join("\n---\n");
+        prompt += "\n\nMoved and Augmented to:\n\n";
+      }
+
+      const { id, contextString, content } = await this.getDetail(nodesStore);
+      prompt += "{ id: " + id;
+      if (contextString) {
+        prompt += ", location: " + contextString;
+      }
+      prompt += " }\n";
+      prompt += content;
+
+      return prompt;
+    },
+    description: async (
+      aggregatorsDescription: string[],
+      nodesStore: NodesStore,
+    ) => {
+      const basePrompt = await this.promptTemplates.base(nodesStore);
+
+      let prompt = `# Change:\n\`\`\`\n` + basePrompt + "\n\`\`\`\n";
       if (aggregatorsDescription.length !== 0) {
-        result +=
-          "\n# Context:\n---\n" +
+        prompt +=
+          "\n# Context:\n\`\`\`\n" +
           aggregatorsDescription
             .map((description, index) => index + 1 + "-" + description)
             .join("\n---\n") +
-          "\n---\n";
+          "\n\`\`\`\n";
       }
 
-      result +=
-        `\n# Task:\n---\nIdentify and explain the specific role or function of the given ${hunk.src ? "change" : "code"} ${aggregatorsDescription.length !== 0 ? "within the provided context" : ""}.` +
+      prompt +=
+        `\n# Task:\n\`\`\`\nIdentify and explain the specific role or function of the given change ${aggregatorsDescription.length !== 0 ? "within the provided context" : ""}.\n\`\`\`\n\n# Guidelines:\n\`\`\`\n- Make explicit references to code elements, identifiers, and code ids in your explanation to ensure clarity and help connect the explanation to the code.\n` +
         (aggregatorsDescription.length !== 0
-          ? `\n---\n\n# Guidelines:\n---\n- Focus on how the code contributes to the surrounding logic, structure, or behavior described in the context.\n- Avoid rephrasing or summarizing the full context.\n---`
-          : "");
+          ? `- Focus on how the code contributes to the surrounding logic, structure, or behavior described in the context.\n- Avoid rephrasing or summarizing the full context.\n`
+          : "") +
+        "\`\`\`";
 
-      return result;
+      return prompt;
     },
-  };
-
-  getHunk = (nodesStore: NodesStore) => {
-    const result: { content: string; context: string; src?: string } = {
-      content: this.node.content,
-      context: this.getContextString(nodesStore),
-    };
-
-    if (this.node.srcs) {
-      result.src = this.node.srcs.map((src) => src.content).join("\n");
-    }
-
-    return result;
   };
 
   private getContexts = (nodesStore: NodesStore) => {
@@ -93,14 +196,7 @@ export class Hunk extends BaseNode {
     }
 
     this.contexts = contexts;
-
-    return contexts;
-  };
-
-  getSemanticContexts = (nodesStore: NodesStore) => {
-    return this.getContexts(nodesStore).filter(
-      (context) => context.nodeType === "SEMANTIC_CONTEXT",
-    );
+    return this.contexts;
   };
 
   private getContextString = (nodesStore: NodesStore) => {
@@ -111,48 +207,42 @@ export class Hunk extends BaseNode {
       return "";
     }
 
-    const reverseContexts = contexts.reverse();
-    return reverseContexts
-      .map((context) => (context as Hunk).node.content)
-      .join("-->");
+    return this.representContextString(
+      contexts.map((context) => (context as Hunk).node.content),
+    );
   };
+
+  private representContextString = (contexts: string[]) =>
+    contexts.reverse().join("-->");
 
   describeNode = async (
     nodesStore: NodesStore,
     options?: {
-      force?: boolean;
+      invalidateCache?: boolean;
       parentsToSet?: string[];
     },
   ): Promise<void> => {
     const descriptionCache = this.node.description;
-    if (descriptionCache && !options?.force) {
+    if (descriptionCache && !options?.invalidateCache) {
       return;
     }
 
     const aggregators = this.getDependencies(nodesStore);
     // TODO: make it batch
     for (const aggregator of aggregators) {
-      await aggregator.wrappedDescribeNode(nodesStore, {
-        force: options?.force,
-      });
+      await aggregator.wrappedDescribeNode(nodesStore);
     }
     const aggregatorsDescription = compact(
       aggregators.map((aggregator) => aggregator.node.description),
     );
 
-    const semanticContexts = this.getSemanticContexts(nodesStore);
-    const generator = await LLMClient.stream(
-      this.promptTemplates.description(aggregatorsDescription, nodesStore),
-      useAgentic.getState().isAgentic && semanticContexts.length > 0
-        ? [
-            this.tools.description(
-              semanticContexts.map(
-                (context) => context.getHunk(nodesStore).content,
-              ),
-            ),
-          ]
-        : undefined,
+    const prompt = await this.promptTemplates.description(
+      aggregatorsDescription,
+      nodesStore,
     );
+    const surroundings = await this.getSurroundings(nodesStore);
+    const tool = this.tools.description(surroundings);
+    const generator = await LLMClient.stream(prompt, tool);
     await this.streamField("description", generator, options?.parentsToSet);
 
     await this.entitle();

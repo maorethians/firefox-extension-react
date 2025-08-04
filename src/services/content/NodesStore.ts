@@ -110,21 +110,6 @@ export class NodesStore {
     return this.nodes[id];
   }
 
-  describeNode = async (
-    id: string,
-    options?: {
-      force?: boolean;
-    },
-  ) => {
-    const node = this.getNodeById(id);
-    await node.wrappedDescribeNode(this, options);
-  };
-
-  entitleNode = async (id: string, force?: boolean) => {
-    const node = this.getNodeById(id);
-    await node.entitle(force);
-  };
-
   updateStorage = async () => {
     const hierarchy: Hierarchy = {
       nodes: this.getNodes().map((node) => node.stringify()),

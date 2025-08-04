@@ -15,51 +15,55 @@ export class TraversalComponent extends BaseNode {
 
   // TODO: check prompts
   promptTemplates = {
-    base: (childrenDescription: string[]) => {
-      let result =
-        "# Code Components Description:\n---\n" +
+    base: async (childrenDescription: string[]) => {
+      let prompt =
+        "# Code Components Description:\n\`\`\`\n" +
+        // TODO: any reference to a code id can be made agentic
         childrenDescription.join("\n---\n") +
-        "\n---\n";
+        "\n\`\`\`\n";
 
       const reasonType = (this.node as TraversalComponentJson).reasonType;
-      if (!reasonType) {
-        return result;
+      if (reasonType) {
+        // TODO: reasons can be made agentic
+        const reasons = (this.node as TraversalComponentJson).reasons;
+        prompt +=
+          "\nCommon Code Snippets:\n\`\`\`\n" +
+          reasons.join("\n---\n") +
+          "\n\`\`\`";
       }
 
-      const reasons = (this.node as TraversalComponentJson).reasons;
-      result +=
-        "\nCommon Code Snippets:\n---\n" + reasons.join("\n---\n") + "\n---";
-
-      return result;
+      return prompt;
     },
-    description: (childrenDescription: string[]) => {
-      let result = this.promptTemplates.base(childrenDescription);
+    description: async (childrenDescription: string[]) => {
+      let prompt = await this.promptTemplates.base(childrenDescription);
 
       const reasons = (this.node as TraversalComponentJson).reasons;
 
-      result +=
-        "\n\n# Task:\n---\nAnalyze the descriptions and provide a cohesive explanation that captures the collective" +
-        " intent behind the components.\n---\n\nGuidelines:\n---\n- Be specific: explain the concrete behavior or" +
-        " outcome they support, not just general goals.\n- Do not repeat or rephrase the same ideas in different" +
-        " words. Each point should add new insight." +
+      prompt +=
+        "\n\n# Task:\n\`\`\`\nAnalyze the descriptions and provide a cohesive explanation that captures the" +
+        " collective intent behind the components.\n\`\`\`\n\nGuidelines:\n\`\`\`\n- Be specific: explain the" +
+        " concrete behavior or outcome they support, not just general goals.\n- Do not repeat or rephrase the same" +
+        " ideas in different words. Each point should add new insight.\n- Make explicit references to code" +
+        " elements, identifiers, and code ids in your explanation to ensure clarity and help connect the" +
+        " explanation to the code." +
         (reasons
           ? "\n- Use common code snippets to find relations between components as needed in your explanation."
           : "") +
-        "\n---\n";
+        "\n\`\`\`\n";
 
-      return result;
+      return prompt;
     },
   };
 
   async describeNode(
     nodesStore: NodesStore,
     options?: {
-      force?: boolean;
+      invalidateCache?: boolean;
       parentsToSet?: string[];
     },
   ): Promise<void> {
     const descriptionCache = this.node.description;
-    if (descriptionCache && !options?.force) {
+    if (descriptionCache && !options?.invalidateCache) {
       return;
     }
 
@@ -67,7 +71,9 @@ export class TraversalComponent extends BaseNode {
     // TODO: make it batch
     for (const child of children) {
       await child.wrappedDescribeNode(nodesStore, {
-        force: options?.force,
+        invalidateCache: this.shouldGenerate(nodesStore)
+          ? undefined
+          : options?.invalidateCache,
         parentsToSet: this.shouldGenerate(nodesStore)
           ? undefined
           : [...(options?.parentsToSet ?? []), this.node.id],
@@ -86,9 +92,8 @@ export class TraversalComponent extends BaseNode {
       return;
     }
 
-    const generator = await LLMClient.stream(
-      this.promptTemplates.description(childrenDescription),
-    );
+    const prompt = await this.promptTemplates.description(childrenDescription);
+    const generator = await LLMClient.stream(prompt);
     await this.streamField("description", generator, options?.parentsToSet);
 
     await this.entitle();

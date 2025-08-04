@@ -31,12 +31,13 @@ export class LLMClient {
   //   return client.generate(prompt);
   // }
 
-  async stream(prompt: string, tools?: StructuredToolInterface[]) {
+  async stream(prompt: string, tool?: StructuredToolInterface) {
     try {
-      if (!tools) {
+      if (!tool) {
         return this.model.stream(prompt);
       }
-      
+
+      const tools = [tool];
       const agent = createToolCallingAgent({
         llm: this.model,
         prompt: ChatPromptTemplate.fromMessages([
@@ -53,12 +54,13 @@ export class LLMClient {
     }
   }
 
-  static async stream(prompt: string, tools?: StructuredToolInterface[]) {
+  static async stream(prompt: string, tool?: StructuredToolInterface) {
+    console.log(prompt);
     const client = await getLLMClient();
     if (!client) {
       return;
     }
 
-    return client.stream(prompt, tools);
+    return client.stream(prompt, tool);
   }
 }
