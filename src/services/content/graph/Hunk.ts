@@ -5,11 +5,16 @@ import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import { compact, partition } from "lodash";
 import { nanoid } from "nanoid";
 
-type AIDetail = {
-  id: string;
+export type AIDetail = {
+  promptId: string;
   surroundings: string[];
   content: string;
   contextString: string;
+  path: string;
+  startLine: number;
+  startLineOffset: number;
+  endLine: number;
+  endLineOffset: number;
 };
 
 export class Hunk extends BaseNode {
@@ -18,36 +23,41 @@ export class Hunk extends BaseNode {
   private detailCache: AIDetail | undefined;
   private srcsDetailCache: AIDetail[] | null | undefined;
   private surroundingsCache:
-    | { id: string; surroundings: string[] }[]
+    | { promptId: string; surroundings: string[] }[]
     | undefined;
 
   constructor(node: HunkJson) {
     super(node);
   }
 
-  async getDetail(nodesStore: NodesStore) {
+  getDetail(nodesStore: NodesStore) {
     if (this.detailCache) {
       return this.detailCache;
     }
 
     if (!this.node.promptId) {
       this.node.promptId = "code_" + nanoid(4);
-      await nodesStore.updateStorage();
+      nodesStore.updateStorage();
     }
 
     this.detailCache = {
-      id: this.node.promptId,
+      promptId: this.node.promptId,
       content: this.node.content,
       contextString: this.getContextString(nodesStore),
       surroundings: this.getContexts(nodesStore)
         .filter((context) => context.nodeType === "SEMANTIC_CONTEXT")
         .map((context) => context.node.content),
+      path: this.node.path,
+      startLine: this.node.startLine,
+      startLineOffset: this.node.startLineOffset,
+      endLine: this.node.endLine,
+      endLineOffset: this.node.startLineOffset,
     };
 
     return this.detailCache;
   }
 
-  async getSrcsDetail(nodesStore: NodesStore) {
+  getSrcsDetail(nodesStore: NodesStore) {
     if (!this.node.srcs) {
       this.srcsDetailCache = null;
       return null;
@@ -71,41 +81,49 @@ export class Hunk extends BaseNode {
       );
 
       srcsDetail.push({
-        id: src.promptId,
+        promptId: src.promptId,
         content: src.content,
         contextString: this.representContextString(
           locationContexts.map((context) => context.content),
         ),
         surroundings: semanticContext.map((context) => context.content),
+        path: src.path,
+        startLine: src.startLine,
+        startLineOffset: src.startLineOffset,
+        endLine: src.endLine,
+        endLineOffset: src.startLineOffset,
       });
     }
 
     if (shouldUpdateStorage) {
-      await nodesStore.updateStorage();
+      nodesStore.updateStorage();
     }
 
     this.srcsDetailCache = srcsDetail;
     return this.srcsDetailCache;
   }
 
-  async getSurroundings(nodesStore: NodesStore) {
+  getSurroundings(nodesStore: NodesStore) {
     if (this.surroundingsCache) {
       return this.surroundingsCache;
     }
 
     const surroundings: {
-      id: string;
+      promptId: string;
       surroundings: string[];
     }[] = [];
 
-    const detail = await this.getDetail(nodesStore);
-    surroundings.push({ id: detail.id, surroundings: detail.surroundings });
+    const detail = this.getDetail(nodesStore);
+    surroundings.push({
+      promptId: detail.promptId,
+      surroundings: detail.surroundings,
+    });
 
-    const srcsDetail = await this.getSrcsDetail(nodesStore);
+    const srcsDetail = this.getSrcsDetail(nodesStore);
     if (srcsDetail) {
       for (const srcDetail of srcsDetail) {
         surroundings.push({
-          id: srcDetail.id,
+          promptId: srcDetail.promptId,
           surroundings: srcDetail.surroundings,
         });
       }
@@ -116,14 +134,14 @@ export class Hunk extends BaseNode {
   }
 
   promptTemplates = {
-    base: async (nodesStore: NodesStore) => {
+    base: (nodesStore: NodesStore) => {
       let prompt = "";
 
-      const srcsDetail = await this.getSrcsDetail(nodesStore);
+      const srcsDetail = this.getSrcsDetail(nodesStore);
       if (srcsDetail) {
         prompt += srcsDetail
-          .map(({ id, contextString, content }) => {
-            let subPrompt = "{ id: " + id;
+          .map(({ promptId, contextString, content }) => {
+            let subPrompt = "{ id: " + promptId;
             if (contextString) {
               subPrompt += ", location: " + contextString;
             }
@@ -136,8 +154,8 @@ export class Hunk extends BaseNode {
         prompt += "\n\nMoved and Augmented to:\n\n";
       }
 
-      const { id, contextString, content } = await this.getDetail(nodesStore);
-      prompt += "{ id: " + id;
+      const { promptId, contextString, content } = this.getDetail(nodesStore);
+      prompt += "{ id: " + promptId;
       if (contextString) {
         prompt += ", location: " + contextString;
       }
@@ -146,11 +164,8 @@ export class Hunk extends BaseNode {
 
       return prompt;
     },
-    description: async (
-      aggregatorsDescription: string[],
-      nodesStore: NodesStore,
-    ) => {
-      const basePrompt = await this.promptTemplates.base(nodesStore);
+    description: (aggregatorsDescription: string[], nodesStore: NodesStore) => {
+      const basePrompt = this.promptTemplates.base(nodesStore);
 
       let prompt = `# Change:\n\`\`\`\n` + basePrompt + "\n\`\`\`\n";
       if (aggregatorsDescription.length !== 0) {
@@ -236,11 +251,11 @@ export class Hunk extends BaseNode {
       aggregators.map((aggregator) => aggregator.node.description),
     );
 
-    const prompt = await this.promptTemplates.description(
+    const prompt = this.promptTemplates.description(
       aggregatorsDescription,
       nodesStore,
     );
-    const surroundings = await this.getSurroundings(nodesStore);
+    const surroundings = this.getSurroundings(nodesStore);
     const tool = this.tools.description(surroundings);
     const generator = await LLMClient.stream(prompt, tool);
     await this.streamField("description", generator, options?.parentsToSet);

@@ -4,9 +4,9 @@ import { UsagePattern } from "@/services/content/graph/UsagePattern.ts";
 import { SuccessivePattern } from "@/services/content/graph/SuccessivePattern.ts";
 import { TraversalComponent } from "@/services/content/graph/TraversalComponent.ts";
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
-import { Hunk } from "@/services/content/graph/Hunk.ts";
+import { AIDetail, Hunk } from "@/services/content/graph/Hunk.ts";
 import { StorageKey } from "@/services/StorageKey.ts";
-import { intersection, last, sum } from "lodash";
+import { intersection, keyBy, last, sum } from "lodash";
 import { SimilarityPattern } from "@/services/content/graph/SimilarityPattern.ts";
 
 export class NodesStore {
@@ -151,5 +151,23 @@ export class NodesStore {
 
     this.nodeDescendents[subjectId] = { firstGeneration, extendedGenerations };
     return this.nodeDescendents[subjectId];
+  }
+
+  getPromptIdsDetail(subjectId: string) {
+    const { firstGeneration, extendedGenerations } =
+      this.getDescendantHunks(subjectId);
+
+    const details: AIDetail[] = [];
+    for (const hunk of [...firstGeneration, ...extendedGenerations]) {
+      const detail = hunk.getDetail(this);
+      details.push(detail);
+
+      const srcsDetail = hunk.getSrcsDetail(this);
+      if (srcsDetail) {
+        details.push(...srcsDetail);
+      }
+    }
+
+    return keyBy(details, "promptId");
   }
 }

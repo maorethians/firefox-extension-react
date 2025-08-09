@@ -8,7 +8,6 @@ import { Steps } from "@/components/popup/Steps.tsx";
 // TODO: retry on service down
 // TODO: inject on unified/split
 // TODO: highlight srcs (src/dst scroll)
-// TODO: potential issue: default coloring may not be eliminated on expansion
 // TODO: subject stream is not working properly
 
 function App() {

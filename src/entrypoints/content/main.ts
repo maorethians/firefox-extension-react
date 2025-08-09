@@ -1,10 +1,10 @@
 import { UrlHelper } from "@/services/UrlHelper.ts";
 import { prepareStorage } from "@/services/prepareStorage.ts";
 import { addControlPanel } from "@/services/content/addControlPanel.ts";
-import { HunkLinesHandler } from "@/services/content/HunkLinesHandler.ts";
+import { RangeHandler } from "@/services/content/RangeHandler.ts";
 import { useNodesStore } from "@/services/content/useNodesStore.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { useHunkLinesHandler } from "@/services/content/useHunkLinesHandler.ts";
+import { useRangeHandler } from "@/services/content/useRangeHandler.ts";
 import { Evaluation } from "@/services/content/Evaluation.ts";
 
 export const contentMain = () => {
@@ -19,8 +19,8 @@ export const contentMain = () => {
     const nodesStore = new NodesStore(url, hierarchy);
     useNodesStore.getState().setNodesStore(nodesStore);
 
-    const hunkLinesHandler = new HunkLinesHandler(url, nodesStore);
+    const hunkLinesHandler = new RangeHandler(url, nodesStore);
     await hunkLinesHandler.init();
-    useHunkLinesHandler.getState().setHunkLinesHandler(hunkLinesHandler);
+    useRangeHandler.getState().setHunkLinesHandler(hunkLinesHandler);
   });
 };

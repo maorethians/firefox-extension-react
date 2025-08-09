@@ -16,7 +16,7 @@ export class UsagePattern extends BaseNode {
   }
 
   promptTemplates = {
-    description: async (
+    description: (
       useHunks: Hunk[],
       usedHunks: Hunk[],
       // TODO: any reference to a code id can be made agentic
@@ -30,17 +30,13 @@ export class UsagePattern extends BaseNode {
 
       let prompt =
         "# Change:\n\`\`\`\n" +
-        (
-          await Promise.all(
-            mainHunks.map((hunk) => hunk.promptTemplates.base(nodesStore)),
-          )
-        ).join("\n---\n") +
+        mainHunks
+          .map((hunk) => hunk.promptTemplates.base(nodesStore))
+          .join("\n---\n") +
         "\n\`\`\`\n\n# Context:\n\`\`\`\n" +
-        (
-          await Promise.all(
-            sideHunks.map((hunk) => hunk.promptTemplates.base(nodesStore)),
-          )
-        ).join("\n---\n");
+        sideHunks
+          .map((hunk) => hunk.promptTemplates.base(nodesStore))
+          .join("\n---\n");
 
       if (usagePatterns.length > 0) {
         prompt +=
@@ -103,7 +99,7 @@ export class UsagePattern extends BaseNode {
       isHunk(node),
     ) as Hunk[];
 
-    const prompt = await this.promptTemplates.description(
+    const prompt = this.promptTemplates.description(
       useHunks,
       usedHunks,
       usedUsagePatternsDetail,

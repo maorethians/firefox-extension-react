@@ -12,17 +12,12 @@ export class SimilarityPattern extends BaseNode {
   }
 
   promptTemplates = {
-    base: async (similarHunks: Hunk[], nodesStore: NodesStore) =>
-      (
-        await Promise.all(
-          similarHunks.map((hunk) => hunk.promptTemplates.base(nodesStore)),
-        )
-      ).join("\n---\n"),
-    description: async (similarHunks: Hunk[], nodesStore: NodesStore) => {
-      const basePrompt = await this.promptTemplates.base(
-        similarHunks,
-        nodesStore,
-      );
+    base: (similarHunks: Hunk[], nodesStore: NodesStore) =>
+      similarHunks
+        .map((hunk) => hunk.promptTemplates.base(nodesStore))
+        .join("\n---\n"),
+    description: (similarHunks: Hunk[], nodesStore: NodesStore) => {
+      const basePrompt = this.promptTemplates.base(similarHunks, nodesStore);
 
       let prompt = "# Change:\n\`\`\`\n" + basePrompt + "\n\`\`\`";
 
@@ -61,10 +56,7 @@ export class SimilarityPattern extends BaseNode {
       (id) => nodesStore.getNodeById(id) as Hunk,
     );
 
-    const prompt = await this.promptTemplates.description(
-      similarNodes,
-      nodesStore,
-    );
+    const prompt = this.promptTemplates.description(similarNodes, nodesStore);
     const surroundings = (
       await Promise.all(
         similarNodes.map((hunk) => hunk.getSurroundings(nodesStore)),

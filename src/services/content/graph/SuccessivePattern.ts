@@ -41,14 +41,12 @@ export class SuccessivePattern extends BaseNode {
   }
 
   promptTemplates = {
-    base: async (sequence: Hunk[], nodesStore: NodesStore) =>
-      (
-        await Promise.all(
-          sequence.map((hunk) => hunk.promptTemplates.base(nodesStore)),
-        )
-      ).join("\n---\n"),
-    description: async (sequence: Hunk[], nodesStore: NodesStore) => {
-      const basePrompt = await this.promptTemplates.base(sequence, nodesStore);
+    base: (sequence: Hunk[], nodesStore: NodesStore) =>
+      sequence
+        .map((hunk) => hunk.promptTemplates.base(nodesStore))
+        .join("\n---\n"),
+    description: (sequence: Hunk[], nodesStore: NodesStore) => {
+      const basePrompt = this.promptTemplates.base(sequence, nodesStore);
 
       let prompt = "# Change:\n\`\`\`\n" + basePrompt + "\n\`\`\`";
 
@@ -74,7 +72,7 @@ export class SuccessivePattern extends BaseNode {
     }
 
     const sequence = this.getSequence(nodesStore);
-    const prompt = await this.promptTemplates.description(sequence, nodesStore);
+    const prompt = this.promptTemplates.description(sequence, nodesStore);
     const surroundings = (
       await Promise.all(
         sequence.map((hunk) => hunk.getSurroundings(nodesStore)),

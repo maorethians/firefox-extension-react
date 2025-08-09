@@ -15,7 +15,7 @@ export class TraversalComponent extends BaseNode {
 
   // TODO: check prompts
   promptTemplates = {
-    base: async (childrenDescription: string[]) => {
+    base: (childrenDescription: string[]) => {
       let prompt =
         "# Code Components Description:\n\`\`\`\n" +
         // TODO: any reference to a code id can be made agentic
@@ -34,8 +34,8 @@ export class TraversalComponent extends BaseNode {
 
       return prompt;
     },
-    description: async (childrenDescription: string[]) => {
-      let prompt = await this.promptTemplates.base(childrenDescription);
+    description: (childrenDescription: string[]) => {
+      let prompt = this.promptTemplates.base(childrenDescription);
 
       const reasons = (this.node as TraversalComponentJson).reasons;
 
@@ -92,7 +92,7 @@ export class TraversalComponent extends BaseNode {
       return;
     }
 
-    const prompt = await this.promptTemplates.description(childrenDescription);
+    const prompt = this.promptTemplates.description(childrenDescription);
     const generator = await LLMClient.stream(prompt);
     await this.streamField("description", generator, options?.parentsToSet);
 

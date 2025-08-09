@@ -25,14 +25,16 @@ export abstract class BaseNode {
   }
 
   tools = {
-    description: (idSurroundings: { id: string; surroundings: string[] }[]) => {
+    description: (
+      idSurroundings: { promptId: string; surroundings: string[] }[],
+    ) => {
       if (idSurroundings.length === 0) {
         return;
       }
 
       const idSurroundingsIndex = keyBy(
-        idSurroundings.map(({ id, surroundings }) => ({
-          id,
+        idSurroundings.map(({ promptId, surroundings }) => ({
+          promptId,
           surroundings,
           index: 0,
         })),
@@ -79,7 +81,10 @@ export abstract class BaseNode {
           schema: z.object({
             ids: z.array(
               z.enum(
-                idSurroundings.map(({ id }) => id) as [string, ...string[]],
+                idSurroundings.map(({ promptId }) => promptId) as [
+                  string,
+                  ...string[],
+                ],
               ),
             ),
           }),
@@ -88,7 +93,7 @@ export abstract class BaseNode {
     },
   };
 
-  promptTemplates: Record<string, (...args: any[]) => Promise<string>> = {};
+  promptTemplates: Record<string, (...args: any[]) => string> = {};
 
   _basePromptTemplates = {
     title: (description: string) =>
@@ -202,9 +207,10 @@ export abstract class BaseNode {
       return;
     }
 
-    this.node[fieldKey] = "";
     let setter;
     if (fieldKey === "description") {
+      this.node.description = "";
+
       setter = (description: string) => {
         useDescription.getState().setDescription(this.node.id, description);
         parentsToSet?.forEach((nodeId) =>
@@ -213,6 +219,8 @@ export abstract class BaseNode {
       };
     }
     if (fieldKey === "title") {
+      this.node.title = "";
+
       setter = (title: string) => {
         useTitle.getState().setTitle(this.node.id, title);
         parentsToSet?.forEach((nodeId) =>
@@ -220,7 +228,7 @@ export abstract class BaseNode {
         );
       };
     }
-    setter?.(this.node[fieldKey]);
+    setter?.("");
 
     for await (const chunk of generator) {
       if (chunk.content || (chunk as ChainValues).output) {
@@ -231,7 +239,7 @@ export abstract class BaseNode {
           content = (chunk as ChainValues).output;
         }
 
-        this.node[fieldKey] += content;
+        this.node[fieldKey] = this.node[fieldKey] + content;
         setter?.(this.node[fieldKey]);
       }
     }

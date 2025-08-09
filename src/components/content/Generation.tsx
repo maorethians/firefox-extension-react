@@ -21,6 +21,7 @@ import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
 import { Evaluation } from "@/services/content/Evaluation.ts";
 import { useEvaluation } from "@/services/content/useEvaluation.ts";
 import { useNodesStore } from "@/services/content/useNodesStore.ts";
+import { useRangeHandler } from "@/services/content/useRangeHandler.ts";
 
 export const Generation: React.FC<{
   url: string;
@@ -36,6 +37,7 @@ export const Generation: React.FC<{
   const setDescription = useDescription((state) => state.setDescription);
 
   const nodesStore = useNodesStore((state) => state.nodesStore);
+  const rangeHandler = useRangeHandler((state) => state.rangeHandler);
 
   useEffect(() => {
     if (!nodesStore) {
@@ -66,6 +68,8 @@ export const Generation: React.FC<{
     .getDependencyGraphNodesId(nodesStore);
   const remainingDependencies = generationProcess?.remainingDependencies;
   const generationProcessState = generationProcess?.state;
+
+  const promptIdsDetail = nodesStore.getPromptIdsDetail(id);
 
   return (
     <div style={{ color, width: "100%" }}>
@@ -165,7 +169,36 @@ export const Generation: React.FC<{
 
       <div style={{ maxHeight: "200px", overflowY: "auto" }}>
         {description && (
-          <ReactMarkdown className={"generation"}>{description}</ReactMarkdown>
+          <div className={"generation"}>
+            <ReactMarkdown
+              components={{
+                code: (input) => {
+                  const content = input?.children as string;
+                  if (
+                    content &&
+                    content.startsWith("code_") &&
+                    promptIdsDetail[content]
+                  ) {
+                    const detail = promptIdsDetail[content];
+                    return (
+                      <a
+                        onClick={() => {
+                          if (rangeHandler) {
+                            rangeHandler.scrollRange(detail);
+                          }
+                        }}
+                      >
+                        {content}
+                      </a>
+                    );
+                  }
+                  return <code>{content}</code>;
+                },
+              }}
+            >
+              {description}
+            </ReactMarkdown>
+          </div>
         )}
       </div>
     </div>

@@ -16,12 +16,19 @@ export type NodeType =
   | ClusterJson["nodeType"]
   | RootJson["nodeType"];
 
+export type Range = {
+  startLine: number;
+  startLineOffset: number;
+  endLine: number;
+  endLineOffset: number;
+};
+
 export type HunkJson = BaseNodeJson & {
   path: string;
   content: string;
   promptId?: string;
   identifiers?: string[];
-  srcs?: {
+  srcs?: ({
     path: string;
     content: string;
     promptId?: string;
@@ -29,23 +36,10 @@ export type HunkJson = BaseNodeJson & {
       content: string;
       nodeType: NodeType;
     }[];
-    startLine: number;
-    startLineOffset: number;
-    endLine: number;
-    endLineOffset: number;
-  }[];
-  dsts?: {
-    startLine: number;
-    startLineOffset: number;
-    endLine: number;
-    endLineOffset: number;
-  }[];
-  startLine: number;
-  startLineOffset: number;
-  endLine: number;
-  endLineOffset: number;
+  } & Range)[];
+  dsts?: Range[];
   nodeType: "BASE" | "LOCATION_CONTEXT" | "SEMANTIC_CONTEXT" | "EXTENSION";
-};
+} & Range;
 
 export type EdgeType =
   | "DEF_USE"

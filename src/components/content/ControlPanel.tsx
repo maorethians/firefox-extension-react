@@ -10,7 +10,7 @@ import {
   getColorMode,
 } from "@/services/content/getColorMode.ts";
 import { ColorModeSwitch } from "@/components/content/ControlPanel/ColorModeSwitch.tsx";
-import { useHunkLinesHandler } from "@/services/content/useHunkLinesHandler.ts";
+import { useRangeHandler } from "@/services/content/useRangeHandler.ts";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
 // @ts-ignore
 import Hierarchy from "../../public/hierarchy.svg?react";
@@ -53,9 +53,7 @@ export const ControlPanel: React.FC<{
     setCurrentIndex(narrator.currentIndex());
   }, [nodesStore]);
 
-  const hunkLinesHandler = useHunkLinesHandler(
-    (state) => state.hunkLinesHandler,
-  );
+  const rangeHandler = useRangeHandler((state) => state.rangeHandler);
 
   const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
   const subjectId = useSubjectId((state) => state.subjectId);
@@ -147,7 +145,7 @@ export const ControlPanel: React.FC<{
             <IconButton
               disabled={!!subjectHunkId}
               style={{ height: "100%" }}
-              onClick={hunkLinesHandler?.scroll}
+              onClick={rangeHandler?.scrollSubject}
             >
               <Scroll
                 style={{
