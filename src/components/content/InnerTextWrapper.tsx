@@ -18,14 +18,14 @@ const weakenColor = (color: string, alpha: number) => {
 const getColor = (states: Set<InnerTextState>, colorMode: ColorMode) => {
   if (states.has("highlight")) {
     return colors[colorMode].HIGHLIGHT;
+  } else if (states.has("strongMove")) {
+    return colors[colorMode].MOVED;
+  } else if (states.has("weakMove")) {
+    return weakenColor(colors[colorMode].MOVED, 0.45);
   } else if (states.has("strongAddition")) {
     return colors[colorMode].ADDITION;
   } else if (states.has("weakAddition")) {
     return weakenColor(colors[colorMode].ADDITION, 0.45);
-  } else if (states.has("strongMove")) {
-    return colors[colorMode].MOVED;
-  } else if (states.has("strongMove")) {
-    return weakenColor(colors[colorMode].MOVED, 0.45);
   }
 
   return;
@@ -38,13 +38,6 @@ export const InnerTextWrapper: React.FC<{
   addRangeState: (state: InnerTextState) => void;
   removeRangeState: (state: InnerTextState) => void;
 }> = ({ innerTextId, element, addRangeState, removeRangeState }) => {
-  const addInnerTextState = useInnerTextState(
-    (state) => state.addInnerTextState,
-  );
-  const removeInnerTextState = useInnerTextState(
-    (state) => state.removeInnerTextState,
-  );
-
   const innerTextState = useInnerTextState(
     (state) => state.innerTextStates[innerTextId],
   );

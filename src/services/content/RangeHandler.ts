@@ -4,7 +4,7 @@ import React from "react";
 import BPromise from "bluebird";
 import { InnerTextWrapper } from "@/components/content/InnerTextWrapper.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { Hunk } from "@/services/content/graph/Hunk.ts";
+import { Hunk, SrcDst } from "@/services/content/graph/Hunk.ts";
 import { UrlHelper } from "@/services/UrlHelper.ts";
 import {
   SUBJECT_ID_MESSAGE,
@@ -191,7 +191,6 @@ export class RangeHandler {
     }
 
     this.standardizeRows();
-
     await this.prepareLines();
 
     this.injectSubjectHunks();
@@ -210,15 +209,16 @@ export class RangeHandler {
 
   static getInnerTextId = (
     path: string,
+    srcDst: SrcDst,
     lineNumber: number,
     lineOffset: number,
-  ) => this.getLineId(path, lineNumber) + "-" + lineOffset;
+  ) => this.getLineId(path, srcDst, lineNumber) + "-" + lineOffset;
 
-  static getLineId = (path: string, lineNumber: number) =>
-    `${path}-${lineNumber}`;
+  static getLineId = (path: string, srcDst: SrcDst, lineNumber: number) =>
+    `${path}-${srcDst}-${lineNumber}`;
 
-  static getRangeId = (path: string, range: Range) =>
-    `${path}-${range.startLine}-${range.startLineOffset}-${range.endLine}-${range.endLineOffset}`;
+  static getRangeId = (path: string, srcDst: SrcDst, range: Range) =>
+    `${path}-${srcDst}-${range.startLine}-${range.startLineOffset}-${range.endLine}-${range.endLineOffset}`;
 
   private getInnerTextWrapper = (line: Element): Element | null | undefined => {
     switch (this.type) {
@@ -230,10 +230,16 @@ export class RangeHandler {
     }
   };
 
-  private getRangeLines(path: string, startLine: number, endLine: number) {
+  private getRangeLines(
+    path: string,
+    srcDst: SrcDst,
+    startLine: number,
+    endLine: number,
+  ) {
     const lines: Record<number, Element> = {};
     for (let lineNumber = startLine; lineNumber <= endLine; lineNumber++) {
-      lines[lineNumber] = this.lines[RangeHandler.getLineId(path, lineNumber)];
+      lines[lineNumber] =
+        this.lines[RangeHandler.getLineId(path, srcDst, lineNumber)];
     }
     return lines;
   }
@@ -249,8 +255,13 @@ export class RangeHandler {
     this.injectedInnerTexts = {};
   };
 
-  injectRange(path: string, range: Range) {
-    const lines = this.getRangeLines(path, range.startLine, range.endLine);
+  injectRange(path: string, srcDst: SrcDst, range: Range) {
+    const lines = this.getRangeLines(
+      path,
+      srcDst,
+      range.startLine,
+      range.endLine,
+    );
     if (!lines || Object.keys(lines).length === 0) {
       return;
     }
@@ -267,6 +278,7 @@ export class RangeHandler {
       for (const child of innerTextWrapper.children) {
         const innerTextId = RangeHandler.getInnerTextId(
           path,
+          srcDst,
           lineNumber,
           lineOffset,
         );
@@ -285,9 +297,10 @@ export class RangeHandler {
             innerTextId,
             nodesStore: this.nodesStore,
             element: element.cloneNode(true) as HTMLElement,
-            addRangeState: (state) => this.addRangeState(path, range, state),
+            addRangeState: (state) =>
+              this.addRangeState(path, srcDst, range, state),
             removeRangeState: (state) =>
-              this.removeRangeState(path, range, state),
+              this.removeRangeState(path, srcDst, range, state),
           });
           const placeholder = document.createElement("span");
           element.parentElement?.replaceChild(placeholder, element);
@@ -341,14 +354,29 @@ export class RangeHandler {
     const { firstGeneration, extendedGenerations } =
       this.nodesStore.getDescendantHunks(useSubjectId.getState().subjectId);
     for (const hunk of [...firstGeneration, ...extendedGenerations]) {
-      this.injectRange(hunk.node.path, hunk.node);
+      this.injectRange(hunk.node.path, "dst", hunk.node);
+      if (hunk.node.srcs) {
+        for (const src of hunk.node.srcs) {
+          this.injectRange(src.path, "src", src);
+        }
+      }
     }
 
     for (const hunk of firstGeneration) {
-      this.addRangeState(hunk.node.path, hunk.node, "strongAddition");
+      this.addRangeState(hunk.node.path, "dst", hunk.node, "strongAddition");
+      if (hunk.node.srcs) {
+        for (const src of hunk.node.srcs) {
+          this.addRangeState(src.path, "src", src, "strongMove");
+        }
+      }
     }
     for (const hunk of extendedGenerations) {
-      this.addRangeState(hunk.node.path, hunk.node, "weakAddition");
+      this.addRangeState(hunk.node.path, "dst", hunk.node, "weakAddition");
+      if (hunk.node.srcs) {
+        for (const src of hunk.node.srcs) {
+          this.addRangeState(src.path, "src", src, "weakMove");
+        }
+      }
     }
   }
 
@@ -357,25 +385,36 @@ export class RangeHandler {
       return;
     }
 
-    const right = row.lastElementChild;
-    if (!right) {
-      return;
+    const columns = row.querySelectorAll("td");
+    switch (columns.length) {
+      case 1:
+      case 2:
+        return {
+          extend: columns.item(0).firstElementChild?.firstElementChild,
+        };
+      case 3:
+        // unified
+        return {
+          srcLineNumber: this.getLineNumber(columns.item(0)),
+          dstLineNumber: this.getLineNumber(columns.item(1)),
+          srcTd: columns.item(2),
+          dstTd: columns.item(2),
+        };
+      case 4:
+        // split
+        return {
+          srcLineNumber: this.getLineNumber(columns.item(0)),
+          dstLineNumber: this.getLineNumber(columns.item(2)),
+          srcTd: columns.item(1),
+          dstTd: columns.item(3),
+        };
+      default:
+        return;
     }
-
-    const rightLineContainer = right.previousElementSibling;
-    if (!rightLineContainer) {
-      return { right };
-    }
-
-    const rightLineNumber =
-      rightLineContainer.getAttribute("data-line-number") ??
-      rightLineContainer.firstElementChild?.innerHTML;
-    if (!rightLineNumber) {
-      return { right };
-    }
-
-    return { right, rightLineNumber: parseInt(rightLineNumber, 10) };
   }
+
+  private getLineNumber = (td: Element) =>
+    td.getAttribute("data-line-number") ?? td.firstElementChild?.innerHTML;
 
   private async expandRow(row: Element, direction: Direction) {
     const nextRow = this.getNextRow(row, direction);
@@ -425,7 +464,12 @@ export class RangeHandler {
     }
   }
 
-  private getClosestRow(path: string, startLine: number, endLine: number) {
+  private getClosestRow(
+    path: string,
+    srcDst: SrcDst,
+    startLine: number,
+    endLine: number,
+  ) {
     const rows = Array.from(this.fileDiffTable[path].children);
 
     let closestRow: Element | null = null;
@@ -433,12 +477,20 @@ export class RangeHandler {
     let closestDistance = rows.length;
     for (const row of rows) {
       const rowInfo = this.getRowInfo(row);
-      if (!rowInfo || !rowInfo.rightLineNumber) {
+      if (!rowInfo) {
         continue;
       }
 
-      const startDistance = Math.abs(rowInfo.rightLineNumber - startLine);
-      const endDistance = Math.abs(rowInfo.rightLineNumber - endLine);
+      const td = srcDst === "src" ? rowInfo.srcTd : rowInfo.dstTd;
+      const lineNumberStr =
+        srcDst === "src" ? rowInfo.srcLineNumber : rowInfo.dstLineNumber;
+      if (!td || !lineNumberStr) {
+        continue;
+      }
+      const lineNumber = parseInt(lineNumberStr);
+
+      const startDistance = Math.abs(lineNumber - startLine);
+      const endDistance = Math.abs(lineNumber - endLine);
       const minDistance = Math.min(startDistance, endDistance);
       if (minDistance < closestDistance) {
         closestRow = row;
@@ -495,10 +547,15 @@ export class RangeHandler {
     return this.subjectOrderedHunks[subjectId];
   };
 
-  scrollRange = ({ path, ...range }: Range & { path: string }) => {
-    this.injectRange(path, range);
+  scrollRange = (path: string, srcDst: SrcDst, range: Range) => {
+    this.injectRange(path, srcDst, range);
 
-    const lines = this.getRangeLines(path, range.startLine, range.endLine);
+    const lines = this.getRangeLines(
+      path,
+      srcDst,
+      range.startLine,
+      range.endLine,
+    );
     if (!lines) {
       return;
     }
@@ -511,34 +568,47 @@ export class RangeHandler {
     const element = sortedLines[Math.floor(sortedLines.length / 2)].line;
     element.scrollIntoView({ behavior: "smooth", block: "center" });
 
-    this.addRangeState(path, range, "highlight");
+    this.addRangeState(path, srcDst, range, "highlight");
+    rangeTimeouts[RangeHandler.getRangeId(path, srcDst, range)] = setTimeout(
+      () => {
+        this.removeRangeState(path, srcDst, range, "highlight");
+      },
+      1000,
+    );
     // TODO: we should flush out of subject generations ranges
-    rangeTimeouts[RangeHandler.getRangeId(path, range)] = setTimeout(() => {
-      this.removeRangeState(path, range, "highlight");
-    }, 1000);
   };
 
   scrollSubject = () => {
     const orderedHunks = this.getSubjectOrderedHunks();
 
-    const scrollHunk = orderedHunks[this.scrollIndex];
-    this.scrollRange(scrollHunk.node);
+    const scrollHunk = orderedHunks[this.scrollIndex].node;
+    this.scrollRange(scrollHunk.path, "dst", scrollHunk);
 
     this.scrollIndex =
       this.scrollIndex === orderedHunks.length - 1 ? 0 : this.scrollIndex + 1;
   };
 
-  addRangeState = (path: string, range: Range, state: InnerTextState) => {
-    const rangeId = RangeHandler.getRangeId(path, range);
+  addRangeState = (
+    path: string,
+    srcDst: SrcDst,
+    range: Range,
+    state: InnerTextState,
+  ) => {
+    const rangeId = RangeHandler.getRangeId(path, srcDst, range);
     const availableTimeout = rangeTimeouts[rangeId];
     if (availableTimeout) {
       clearTimeout(availableTimeout);
       delete rangeTimeouts[rangeId];
     }
 
-    this.injectRange(path, range);
+    this.injectRange(path, srcDst, range);
 
-    const lines = this.getRangeLines(path, range.startLine, range.endLine);
+    const lines = this.getRangeLines(
+      path,
+      srcDst,
+      range.startLine,
+      range.endLine,
+    );
     if (!lines || Object.keys(lines).length === 0) {
       return;
     }
@@ -556,6 +626,7 @@ export class RangeHandler {
       for (const child of innerTextWrapper.children) {
         const innerTextId = RangeHandler.getInnerTextId(
           path,
+          srcDst,
           lineNumber,
           lineOffset,
         );
@@ -574,10 +645,20 @@ export class RangeHandler {
     }
   };
 
-  removeRangeState = (path: string, range: Range, state: InnerTextState) => {
-    this.injectRange(path, range);
+  removeRangeState = (
+    path: string,
+    srcDst: SrcDst,
+    range: Range,
+    state: InnerTextState,
+  ) => {
+    this.injectRange(path, srcDst, range);
 
-    const lines = this.getRangeLines(path, range.startLine, range.endLine);
+    const lines = this.getRangeLines(
+      path,
+      srcDst,
+      range.startLine,
+      range.endLine,
+    );
     if (!lines || Object.keys(lines).length === 0) {
       return;
     }
@@ -596,6 +677,7 @@ export class RangeHandler {
       for (const child of innerTextWrapper.children) {
         const innerTextId = RangeHandler.getInnerTextId(
           path,
+          srcDst,
           lineNumber,
           lineOffset,
         );
@@ -617,14 +699,14 @@ export class RangeHandler {
   private standardizeRows(rows?: Element[]) {
     if (rows) {
       this.removeDefaultBackground(rows);
-      this.wrapInnerText(rows);
+      this.wrapRowsInnerText(rows);
     }
 
     const allRows = Object.values(this.fileDiffTable)
       .map((fileRows) => Array.from(fileRows.children))
       .flat();
     this.removeDefaultBackground(allRows);
-    this.wrapInnerText(allRows);
+    this.wrapRowsInnerText(allRows);
   }
 
   private removeDefaultBackground(rows: Element[]) {
@@ -643,32 +725,41 @@ export class RangeHandler {
     }
   }
 
-  private wrapInnerText(rows: Element[]) {
+  private wrapRowsInnerText(rows: Element[]) {
     for (const row of rows) {
       const rowInfo = this.getRowInfo(row);
-      const line = rowInfo?.right;
-      if (!line) {
+      if (!rowInfo) {
         continue;
       }
 
-      const innerTextWrapper = this.getInnerTextWrapper(line);
-      if (!innerTextWrapper) {
-        continue;
+      const { srcTd, dstTd } = rowInfo;
+      if (srcTd) {
+        this.wrapTdInnerText(srcTd);
+      }
+      if (dstTd) {
+        this.wrapTdInnerText(dstTd);
+      }
+    }
+  }
+
+  private wrapTdInnerText(td: Element) {
+    const innerTextWrapper = this.getInnerTextWrapper(td);
+    if (!innerTextWrapper) {
+      return;
+    }
+
+    // wrap any text with span
+    let currentChild = innerTextWrapper.firstChild;
+    while (currentChild) {
+      if (currentChild.nodeType === Node.TEXT_NODE) {
+        const wrapper = document.createElement("span");
+        wrapper.textContent = currentChild.textContent;
+        innerTextWrapper.replaceChild(wrapper, currentChild);
+
+        currentChild = wrapper;
       }
 
-      // wrap any text with span
-      let currentChild = innerTextWrapper.firstChild;
-      while (currentChild) {
-        if (currentChild.nodeType === Node.TEXT_NODE) {
-          const wrapper = document.createElement("span");
-          wrapper.textContent = currentChild.textContent;
-          innerTextWrapper.replaceChild(wrapper, currentChild);
-
-          currentChild = wrapper;
-        }
-
-        currentChild = currentChild.nextSibling;
-      }
+      currentChild = currentChild.nextSibling;
     }
   }
 
@@ -676,11 +767,10 @@ export class RangeHandler {
     const { firstGeneration, extendedGenerations } =
       this.nodesStore.getDescendantHunks("root");
     for (const hunk of [...firstGeneration, ...extendedGenerations]) {
-      const path = hunk.node.path;
-      await this.prepareRangeLines(path, hunk.node);
+      await this.prepareRangeLines(hunk.node.path, "dst", hunk.node);
       if (hunk.node.srcs) {
         for (const src of hunk.node.srcs) {
-          await this.prepareRangeLines(path, src);
+          await this.prepareRangeLines(src.path, "src", src);
         }
       }
     }
@@ -688,10 +778,12 @@ export class RangeHandler {
 
   private prepareRangeLines = async (
     path: string,
+    srcDst: SrcDst,
     { startLine, endLine }: Range,
   ) => {
     const { closestRow, closenessType } = this.getClosestRow(
       path,
+      srcDst,
       startLine,
       endLine,
     );
@@ -708,14 +800,15 @@ export class RangeHandler {
         break;
       }
 
-      if (
-        rowInfo.rightLineNumber &&
-        startLine <= rowInfo.rightLineNumber &&
-        rowInfo.rightLineNumber <= endLine
-      ) {
-        this.lines[RangeHandler.getLineId(path, rowInfo.rightLineNumber)] =
-          rowInfo.right;
-        linesCount++;
+      const td = srcDst === "src" ? rowInfo.srcTd : rowInfo.dstTd;
+      const lineNumberStr =
+        srcDst === "src" ? rowInfo.srcLineNumber : rowInfo.dstLineNumber;
+      if (td && lineNumberStr) {
+        const lineNumber = parseInt(lineNumberStr);
+        if (startLine <= lineNumber && lineNumber <= endLine) {
+          this.lines[RangeHandler.getLineId(path, srcDst, lineNumber)] = td;
+          linesCount++;
+        }
       }
 
       if (linesCount === rangeLength) {

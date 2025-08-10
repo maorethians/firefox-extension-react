@@ -5,6 +5,8 @@ import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import { compact, partition } from "lodash";
 import { nanoid } from "nanoid";
 
+export type SrcDst = "src" | "dst";
+
 export type AIDetail = {
   promptId: string;
   surroundings: string[];
@@ -15,6 +17,7 @@ export type AIDetail = {
   startLineOffset: number;
   endLine: number;
   endLineOffset: number;
+  srcDst: SrcDst;
 };
 
 export class Hunk extends BaseNode {
@@ -52,6 +55,7 @@ export class Hunk extends BaseNode {
       startLineOffset: this.node.startLineOffset,
       endLine: this.node.endLine,
       endLineOffset: this.node.startLineOffset,
+      srcDst: "dst",
     };
 
     return this.detailCache;
@@ -92,6 +96,7 @@ export class Hunk extends BaseNode {
         startLineOffset: src.startLineOffset,
         endLine: src.endLine,
         endLineOffset: src.startLineOffset,
+        srcDst: "src",
       });
     }
 

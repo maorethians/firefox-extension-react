@@ -184,7 +184,11 @@ export const Generation: React.FC<{
                       <a
                         onClick={() => {
                           if (rangeHandler) {
-                            rangeHandler.scrollRange(detail);
+                            rangeHandler.scrollRange(
+                              detail.path,
+                              detail.srcDst,
+                              detail,
+                            );
                           }
                         }}
                       >
