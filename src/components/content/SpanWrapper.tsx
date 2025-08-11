@@ -2,9 +2,14 @@ import React, { RefObject } from "react";
 import { colors } from "@/public/colors.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { useColorMode } from "@/services/content/useColorMode.ts";
-import { RangeState, useRangeState } from "@/services/content/useRangeState.ts";
+import {
+  RangeState,
+  rangeTimeouts,
+  useRangeState,
+} from "@/services/content/useRangeState.ts";
 import { ColorMode } from "@/services/content/getColorMode";
-import { compact } from "lodash";
+import { compact, uniq } from "lodash";
+import { useRangeHandler } from "@/services/content/useRangeHandler.ts";
 
 const weakenColor = (color: string, alpha: number) => {
   const r = parseInt(color.slice(1, 3), 16);
@@ -34,6 +39,11 @@ export const SpanWrapper: React.FC<{
   nodesStore: NodesStore;
   element: HTMLElement;
 }> = ({ rangeIds, element }) => {
+  const rangeHandler = useRangeHandler((state) => state.rangeHandler)!;
+  const groupsRanges = uniq(
+    rangeIds.map((rangeId) => rangeHandler.getRangeGroup(rangeId)).flat(),
+  );
+
   const rangesStates = rangeIds.map((rangeId) =>
     useRangeState((state) => state.rangeStates[rangeId]),
   );
@@ -60,13 +70,15 @@ export const SpanWrapper: React.FC<{
         cursor: "pointer",
       }}
       onMouseEnter={() => {
-        for (const rangeId of rangeIds) {
+        for (const rangeId of groupsRanges) {
           addRangeState(rangeId, "highlight");
         }
       }}
       onMouseLeave={() => {
-        for (const rangeId of rangeIds) {
-          removeRangeState(rangeId, "highlight");
+        for (const rangeId of groupsRanges) {
+          rangeTimeouts[rangeId] = setTimeout(() => {
+            useRangeState.getState().removeRangeState(rangeId, "highlight");
+          }, 500);
         }
       }}
     ></span>

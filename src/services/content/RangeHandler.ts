@@ -27,6 +27,9 @@ export class RangeHandler {
   private fileOrder: Record<string, number> = {};
   private lines: Record<string, Element> = {};
 
+  private rangeParent: Record<string, string> = {};
+  private rangeGroup: Record<string, string[]> = {};
+
   private subjectOrderedHunks: Record<string, Hunk[]> = {};
   private scrollIndex = 0;
 
@@ -180,7 +183,7 @@ export class RangeHandler {
     }
 
     this.standardizeRows();
-    await this.prepareLines();
+    await this.prepare();
     this.wrapInRangesSpans();
 
     this.addSubjectState();
@@ -569,14 +572,27 @@ export class RangeHandler {
     }
   }
 
-  private prepareLines = async () => {
+  private prepare = async () => {
     const { firstGeneration, extendedGenerations } =
       this.nodesStore.getDescendantHunks("root");
     for (const hunk of [...firstGeneration, ...extendedGenerations]) {
       await this.prepareRangeLines(hunk.node.path, "dst", hunk.node);
+
+      const rangeId = RangeHandler.getRangeId(hunk.node.path, "dst", hunk.node);
+      this.rangeParent[rangeId] = rangeId;
       if (hunk.node.srcs) {
         for (const src of hunk.node.srcs) {
           await this.prepareRangeLines(src.path, "src", src);
+          this.rangeParent[RangeHandler.getRangeId(src.path, "src", src)] =
+            rangeId;
+        }
+      }
+      if (hunk.node.dsts) {
+        for (const dst of hunk.node.dsts) {
+          await this.prepareRangeLines(hunk.node.path, "dst", dst);
+          this.rangeParent[
+            RangeHandler.getRangeId(hunk.node.path, "dst", dst)
+          ] = rangeId;
         }
       }
     }
@@ -666,7 +682,7 @@ export class RangeHandler {
     }
   };
 
-  populateRangeSpans = (
+  private populateRangeSpans = (
     spans: Record<
       string,
       {
@@ -720,5 +736,18 @@ export class RangeHandler {
         lineOffset += element.innerText.length;
       }
     }
+  };
+
+  getRangeGroup = (rangeId: string) => {
+    if (this.rangeGroup[rangeId]) {
+      return this.rangeGroup[rangeId];
+    }
+    
+    const groupParent = this.rangeParent[rangeId];
+    this.rangeGroup[rangeId] = Object.entries(this.rangeParent)
+      .filter(([_rangeId, parentId]) => parentId === groupParent)
+      .map(([rangeId]) => rangeId);
+
+    return this.rangeGroup[rangeId];
   };
 }

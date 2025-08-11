@@ -4,7 +4,6 @@ import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import uniqueBy from "@popperjs/core/lib/utils/uniqueBy";
-import { compact } from "lodash";
 
 export class UsagePattern extends BaseNode {
   declare node: UsagePatternJson;
@@ -20,7 +19,10 @@ export class UsagePattern extends BaseNode {
       useHunks: Hunk[],
       usedHunks: Hunk[],
       // TODO: any reference to a code id can be made agentic
-      usagePatterns: { description: string; identifiers: string[] }[],
+      usagePatterns: {
+        description: string;
+        ids: { id: string; identifier: string }[];
+      }[],
       nodesStore: NodesStore,
     ) => {
       const hasExtension = useHunks[0].nodeType === "EXTENSION";
@@ -33,24 +35,28 @@ export class UsagePattern extends BaseNode {
         mainHunks
           .map((hunk) => hunk.promptTemplates.base(nodesStore))
           .join("\n---\n") +
-        "\n\`\`\`\n\n# Context:\n\`\`\`\n" +
-        sideHunks
-          .map((hunk) => hunk.promptTemplates.base(nodesStore))
-          .join("\n---\n");
+        "\n\`\`\`\n\n# Context:\n\`\`\`\n";
 
       if (usagePatterns.length > 0) {
         prompt +=
-          "\n---\n" +
           usagePatterns
             .map(
               (usagePattern) =>
-                "{ identifiers: " +
-                usagePattern.identifiers.join(", ") +
-                " }\n" +
+                usagePattern.ids
+                  .map(
+                    ({ id, identifier }) =>
+                      "{ id: " + id + ", identifier: " + identifier + " }",
+                  )
+                  .join("\n") +
+                "\n" +
                 usagePattern.description,
             )
-            .join("\n---\n");
+            .join("\n---\n") + "\n---\n";
       }
+
+      prompt += sideHunks
+        .map((hunk) => hunk.promptTemplates.base(nodesStore))
+        .join("\n---\n");
 
       prompt += "\n\`\`\`";
 
@@ -87,11 +93,10 @@ export class UsagePattern extends BaseNode {
       .filter((usagePattern) => usagePattern.node.description)
       .map((usagePattern) => ({
         description: usagePattern.node.description!,
-        identifiers: compact(
-          usagePattern
-            .getUseHunks(nodesStore)
-            .map((hunk) => hunk.node.identifiers),
-        ).flat(),
+        ids: usagePattern.getUseHunks(nodesStore).map((hunk) => ({
+          id: hunk.getDetail(nodesStore).promptId,
+          identifier: hunk.node.identifiers!.join(", "),
+        })),
       }));
 
     const useHunks = this.getUseHunks(nodesStore);
