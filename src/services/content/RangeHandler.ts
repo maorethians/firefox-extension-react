@@ -2,7 +2,7 @@ import { groupBy } from "lodash";
 import ReactDOM from "react-dom/client";
 import React from "react";
 import BPromise from "bluebird";
-import { InnerTextWrapper } from "@/components/content/InnerTextWrapper.tsx";
+import { SpanWrapper } from "@/components/content/SpanWrapper.tsx";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk, SrcDst } from "@/services/content/graph/Hunk.ts";
 import { UrlHelper } from "@/services/UrlHelper.ts";
@@ -12,10 +12,9 @@ import {
 } from "@/services/content/useSubjectId.ts";
 import { Range } from "@/types";
 import {
-  InnerTextState,
   rangeTimeouts,
-  useInnerTextState,
-} from "@/services/content/useInnerTextState.ts";
+  useRangeState,
+} from "@/services/content/useRangeState.ts";
 
 type ClosenessType = "start" | "end";
 type Direction = "up" | "down";
@@ -28,16 +27,6 @@ export class RangeHandler {
   private fileOrder: Record<string, number> = {};
   private lines: Record<string, Element> = {};
 
-  private injectedInnerTexts: Record<
-    string,
-    {
-      element: HTMLElement;
-      placeholder: Element;
-      path: string;
-      lineNumber: number;
-      lineOffset: number;
-    }
-  > = {};
   private subjectOrderedHunks: Record<string, Hunk[]> = {};
   private scrollIndex = 0;
 
@@ -192,22 +181,58 @@ export class RangeHandler {
 
     this.standardizeRows();
     await this.prepareLines();
+    this.wrapInRangesSpans();
 
-    this.injectSubjectHunks();
+    this.addSubjectState();
 
     window.addEventListener("message", ({ data }: MessageEvent) => {
       if (data.type !== SUBJECT_ID_MESSAGE) {
         return;
       }
 
-      this.flushInjections();
-      this.injectSubjectHunks();
+      useRangeState.getState().flushRangeState();
+      this.addSubjectState();
 
       this.scrollIndex = 0;
     });
   }
 
-  static getInnerTextId = (
+  private addSubjectState() {
+    const { firstGeneration, extendedGenerations } =
+      this.nodesStore.getDescendantHunks(useSubjectId.getState().subjectId);
+
+    this.addGenerationState(firstGeneration, "strong");
+    this.addGenerationState(extendedGenerations, "weak");
+  }
+
+  addGenerationState(generation: Hunk[], strength: "strong" | "weak") {
+    const addRangeState = useRangeState.getState().addRangeState;
+
+    for (const hunk of generation) {
+      addRangeState(
+        RangeHandler.getRangeId(hunk.node.path, "dst", hunk.node),
+        `${strength}Addition`,
+      );
+      if (hunk.node.srcs) {
+        for (const src of hunk.node.srcs) {
+          addRangeState(
+            RangeHandler.getRangeId(src.path, "src", src),
+            `${strength}Move`,
+          );
+        }
+      }
+      if (hunk.node.dsts) {
+        for (const dst of hunk.node.dsts) {
+          addRangeState(
+            RangeHandler.getRangeId(hunk.node.path, "dst", dst),
+            `${strength}Move`,
+          );
+        }
+      }
+    }
+  }
+
+  static getSpanId = (
     path: string,
     srcDst: SrcDst,
     lineNumber: number,
@@ -220,7 +245,7 @@ export class RangeHandler {
   static getRangeId = (path: string, srcDst: SrcDst, range: Range) =>
     `${path}-${srcDst}-${range.startLine}-${range.startLineOffset}-${range.endLine}-${range.endLineOffset}`;
 
-  private getInnerTextWrapper = (line: Element): Element | null | undefined => {
+  private getSpansWrapper = (line: Element): Element | null | undefined => {
     switch (this.type) {
       case "Commit":
         return this.innerTextWrapper.commit(line);
@@ -242,83 +267,6 @@ export class RangeHandler {
         this.lines[RangeHandler.getLineId(path, srcDst, lineNumber)];
     }
     return lines;
-  }
-
-  flushInjections = () => {
-    for (const [id, { element, placeholder }] of Object.entries(
-      this.injectedInnerTexts,
-    )) {
-      placeholder.parentElement?.replaceChild(element, placeholder);
-      useInnerTextState.getState().flushInnerTextState(id);
-    }
-
-    this.injectedInnerTexts = {};
-  };
-
-  injectRange(path: string, srcDst: SrcDst, range: Range) {
-    const lines = this.getRangeLines(
-      path,
-      srcDst,
-      range.startLine,
-      range.endLine,
-    );
-    if (!lines || Object.keys(lines).length === 0) {
-      return;
-    }
-
-    for (const [lineNumberStr, line] of Object.entries(lines)) {
-      const lineNumber = parseInt(lineNumberStr);
-
-      const innerTextWrapper = this.getInnerTextWrapper(line);
-      if (!innerTextWrapper) {
-        continue;
-      }
-
-      let lineOffset = 0;
-      for (const child of innerTextWrapper.children) {
-        const innerTextId = RangeHandler.getInnerTextId(
-          path,
-          srcDst,
-          lineNumber,
-          lineOffset,
-        );
-
-        const injected = this.injectedInnerTexts[innerTextId];
-        if (injected) {
-          lineOffset += injected.element.innerText.length;
-          continue;
-        }
-
-        const element = child as HTMLElement;
-
-        const isInRange = this.isInRange({ lineNumber, lineOffset }, range);
-        if (isInRange) {
-          const component = React.createElement(InnerTextWrapper, {
-            innerTextId,
-            nodesStore: this.nodesStore,
-            element: element.cloneNode(true) as HTMLElement,
-            addRangeState: (state) =>
-              this.addRangeState(path, srcDst, range, state),
-            removeRangeState: (state) =>
-              this.removeRangeState(path, srcDst, range, state),
-          });
-          const placeholder = document.createElement("span");
-          element.parentElement?.replaceChild(placeholder, element);
-          const root = ReactDOM.createRoot(placeholder);
-          root.render(component);
-
-          this.injectedInnerTexts[innerTextId] = {
-            element,
-            placeholder,
-            path,
-            lineNumber,
-            lineOffset,
-          };
-        }
-
-        lineOffset += element.innerText.length;
-      }
-    }
   }
 
   private isInRange(
@@ -348,36 +296,6 @@ export class RangeHandler {
         lineOffset >= startLineOffset &&
         lineOffset < endLineOffset)
     );
-  }
-
-  injectSubjectHunks() {
-    const { firstGeneration, extendedGenerations } =
-      this.nodesStore.getDescendantHunks(useSubjectId.getState().subjectId);
-    for (const hunk of [...firstGeneration, ...extendedGenerations]) {
-      this.injectRange(hunk.node.path, "dst", hunk.node);
-      if (hunk.node.srcs) {
-        for (const src of hunk.node.srcs) {
-          this.injectRange(src.path, "src", src);
-        }
-      }
-    }
-
-    for (const hunk of firstGeneration) {
-      this.addRangeState(hunk.node.path, "dst", hunk.node, "strongAddition");
-      if (hunk.node.srcs) {
-        for (const src of hunk.node.srcs) {
-          this.addRangeState(src.path, "src", src, "strongMove");
-        }
-      }
-    }
-    for (const hunk of extendedGenerations) {
-      this.addRangeState(hunk.node.path, "dst", hunk.node, "weakAddition");
-      if (hunk.node.srcs) {
-        for (const src of hunk.node.srcs) {
-          this.addRangeState(src.path, "src", src, "weakMove");
-        }
-      }
-    }
   }
 
   private getRowInfo(row?: Element | null) {
@@ -547,9 +465,8 @@ export class RangeHandler {
     return this.subjectOrderedHunks[subjectId];
   };
 
+  // TODO: cache mid line for each range
   scrollRange = (path: string, srcDst: SrcDst, range: Range) => {
-    this.injectRange(path, srcDst, range);
-
     const lines = this.getRangeLines(
       path,
       srcDst,
@@ -568,14 +485,11 @@ export class RangeHandler {
     const element = sortedLines[Math.floor(sortedLines.length / 2)].line;
     element.scrollIntoView({ behavior: "smooth", block: "center" });
 
-    this.addRangeState(path, srcDst, range, "highlight");
-    rangeTimeouts[RangeHandler.getRangeId(path, srcDst, range)] = setTimeout(
-      () => {
-        this.removeRangeState(path, srcDst, range, "highlight");
-      },
-      1000,
-    );
-    // TODO: we should flush out of subject generations ranges
+    const rangeId = RangeHandler.getRangeId(path, srcDst, range);
+    useRangeState.getState().addRangeState(rangeId, "highlight");
+    rangeTimeouts[rangeId] = setTimeout(() => {
+      useRangeState.getState().removeRangeState(rangeId, "highlight");
+    }, 1000);
   };
 
   scrollSubject = () => {
@@ -588,125 +502,17 @@ export class RangeHandler {
       this.scrollIndex === orderedHunks.length - 1 ? 0 : this.scrollIndex + 1;
   };
 
-  addRangeState = (
-    path: string,
-    srcDst: SrcDst,
-    range: Range,
-    state: InnerTextState,
-  ) => {
-    const rangeId = RangeHandler.getRangeId(path, srcDst, range);
-    const availableTimeout = rangeTimeouts[rangeId];
-    if (availableTimeout) {
-      clearTimeout(availableTimeout);
-      delete rangeTimeouts[rangeId];
-    }
-
-    this.injectRange(path, srcDst, range);
-
-    const lines = this.getRangeLines(
-      path,
-      srcDst,
-      range.startLine,
-      range.endLine,
-    );
-    if (!lines || Object.keys(lines).length === 0) {
-      return;
-    }
-
-    const addInnerTextState = useInnerTextState.getState().addInnerTextState;
-    for (const [lineNumberStr, line] of Object.entries(lines)) {
-      const lineNumber = parseInt(lineNumberStr);
-
-      const innerTextWrapper = this.getInnerTextWrapper(line);
-      if (!innerTextWrapper) {
-        continue;
-      }
-
-      let lineOffset = 0;
-      for (const child of innerTextWrapper.children) {
-        const innerTextId = RangeHandler.getInnerTextId(
-          path,
-          srcDst,
-          lineNumber,
-          lineOffset,
-        );
-
-        const isInRange = this.isInRange({ lineNumber, lineOffset }, range);
-        if (isInRange) {
-          addInnerTextState(innerTextId, state);
-          lineOffset +=
-            this.injectedInnerTexts[innerTextId].element.innerText.length;
-          continue;
-        }
-
-        const element = child as HTMLElement;
-        lineOffset += element.innerText.length;
-      }
-    }
-  };
-
-  removeRangeState = (
-    path: string,
-    srcDst: SrcDst,
-    range: Range,
-    state: InnerTextState,
-  ) => {
-    this.injectRange(path, srcDst, range);
-
-    const lines = this.getRangeLines(
-      path,
-      srcDst,
-      range.startLine,
-      range.endLine,
-    );
-    if (!lines || Object.keys(lines).length === 0) {
-      return;
-    }
-
-    const removeInnerTextState =
-      useInnerTextState.getState().removeInnerTextState;
-    for (const [lineNumberStr, line] of Object.entries(lines)) {
-      const lineNumber = parseInt(lineNumberStr);
-
-      const innerTextWrapper = this.getInnerTextWrapper(line);
-      if (!innerTextWrapper) {
-        continue;
-      }
-
-      let lineOffset = 0;
-      for (const child of innerTextWrapper.children) {
-        const innerTextId = RangeHandler.getInnerTextId(
-          path,
-          srcDst,
-          lineNumber,
-          lineOffset,
-        );
-
-        const isInRange = this.isInRange({ lineNumber, lineOffset }, range);
-        if (isInRange) {
-          removeInnerTextState(innerTextId, state);
-          lineOffset +=
-            this.injectedInnerTexts[innerTextId].element.innerText.length;
-          continue;
-        }
-
-        const element = child as HTMLElement;
-        lineOffset += element.innerText.length;
-      }
-    }
-  };
-
   private standardizeRows(rows?: Element[]) {
     if (rows) {
       this.removeDefaultBackground(rows);
-      this.wrapRowsInnerText(rows);
+      this.wrapRowsTexts(rows);
     }
 
     const allRows = Object.values(this.fileDiffTable)
       .map((fileRows) => Array.from(fileRows.children))
       .flat();
     this.removeDefaultBackground(allRows);
-    this.wrapRowsInnerText(allRows);
+    this.wrapRowsTexts(allRows);
   }
 
   private removeDefaultBackground(rows: Element[]) {
@@ -725,7 +531,7 @@ export class RangeHandler {
     }
   }
 
-  private wrapRowsInnerText(rows: Element[]) {
+  private wrapRowsTexts(rows: Element[]) {
     for (const row of rows) {
       const rowInfo = this.getRowInfo(row);
       if (!rowInfo) {
@@ -734,16 +540,16 @@ export class RangeHandler {
 
       const { srcTd, dstTd } = rowInfo;
       if (srcTd) {
-        this.wrapTdInnerText(srcTd);
+        this.wrapTdTexts(srcTd);
       }
       if (dstTd) {
-        this.wrapTdInnerText(dstTd);
+        this.wrapTdTexts(dstTd);
       }
     }
   }
 
-  private wrapTdInnerText(td: Element) {
-    const innerTextWrapper = this.getInnerTextWrapper(td);
+  private wrapTdTexts(td: Element) {
+    const innerTextWrapper = this.getSpansWrapper(td);
     if (!innerTextWrapper) {
       return;
     }
@@ -824,6 +630,95 @@ export class RangeHandler {
       }
 
       currentRow = nextRow;
+    }
+  };
+
+  private wrapInRangesSpans = () => {
+    const spans: Record<string, { element: Element; rangeIds: Set<string> }> =
+      {};
+
+    const { firstGeneration, extendedGenerations } =
+      this.nodesStore.getDescendantHunks("root");
+    for (const hunk of [...firstGeneration, ...extendedGenerations]) {
+      this.populateRangeSpans(spans, hunk.node.path, "dst", hunk.node);
+      if (hunk.node.srcs) {
+        for (const src of hunk.node.srcs) {
+          this.populateRangeSpans(spans, src.path, "src", src);
+        }
+      }
+      if (hunk.node.dsts) {
+        for (const dst of hunk.node.dsts) {
+          this.populateRangeSpans(spans, hunk.node.path, "dst", dst);
+        }
+      }
+    }
+
+    for (const { element, rangeIds } of Object.values(spans)) {
+      const component = React.createElement(SpanWrapper, {
+        rangeIds: Array.from(rangeIds),
+        nodesStore: this.nodesStore,
+        element: element.cloneNode(true) as HTMLElement,
+      });
+      const placeholder = document.createElement("span");
+      element.parentElement?.replaceChild(placeholder, element);
+      const root = ReactDOM.createRoot(placeholder);
+      root.render(component);
+    }
+  };
+
+  populateRangeSpans = (
+    spans: Record<
+      string,
+      {
+        element: Element;
+        rangeIds: Set<string>;
+      }
+    >,
+    path: string,
+    srcDst: SrcDst,
+    range: Range,
+  ) => {
+    const rangeId = RangeHandler.getRangeId(path, srcDst, range);
+
+    const lines = this.getRangeLines(
+      path,
+      srcDst,
+      range.startLine,
+      range.endLine,
+    );
+    if (!lines || Object.keys(lines).length === 0) {
+      return;
+    }
+
+    for (const [lineNumberStr, line] of Object.entries(lines)) {
+      const lineNumber = parseInt(lineNumberStr);
+
+      const spansWrapper = this.getSpansWrapper(line);
+      if (!spansWrapper) {
+        continue;
+      }
+
+      let lineOffset = 0;
+      for (const child of spansWrapper.children) {
+        const spanId = RangeHandler.getSpanId(
+          path,
+          srcDst,
+          lineNumber,
+          lineOffset,
+        );
+
+        const element = child as HTMLElement;
+
+        const isInRange = this.isInRange({ lineNumber, lineOffset }, range);
+        if (isInRange) {
+          if (!spans[spanId]) {
+            spans[spanId] = { element, rangeIds: new Set<string>() };
+          }
+          spans[spanId].rangeIds.add(rangeId);
+        }
+
+        lineOffset += element.innerText.length;
+      }
     }
   };
 }

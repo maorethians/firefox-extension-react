@@ -54,7 +54,7 @@ export class Hunk extends BaseNode {
       startLine: this.node.startLine,
       startLineOffset: this.node.startLineOffset,
       endLine: this.node.endLine,
-      endLineOffset: this.node.startLineOffset,
+      endLineOffset: this.node.endLineOffset,
       srcDst: "dst",
     };
 
@@ -95,7 +95,7 @@ export class Hunk extends BaseNode {
         startLine: src.startLine,
         startLineOffset: src.startLineOffset,
         endLine: src.endLine,
-        endLineOffset: src.startLineOffset,
+        endLineOffset: src.endLineOffset,
         srcDst: "src",
       });
     }

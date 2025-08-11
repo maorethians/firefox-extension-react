@@ -2,11 +2,9 @@ import React, { RefObject } from "react";
 import { colors } from "@/public/colors.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { useColorMode } from "@/services/content/useColorMode.ts";
-import {
-  InnerTextState,
-  useInnerTextState,
-} from "@/services/content/useInnerTextState.ts";
+import { RangeState, useRangeState } from "@/services/content/useRangeState.ts";
 import { ColorMode } from "@/services/content/getColorMode";
+import { compact } from "lodash";
 
 const weakenColor = (color: string, alpha: number) => {
   const r = parseInt(color.slice(1, 3), 16);
@@ -15,37 +13,36 @@ const weakenColor = (color: string, alpha: number) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-const getColor = (states: Set<InnerTextState>, colorMode: ColorMode) => {
-  if (states.has("highlight")) {
+const getColor = (states: RangeState[], colorMode: ColorMode) => {
+  if (states.includes("highlight")) {
     return colors[colorMode].HIGHLIGHT;
-  } else if (states.has("strongMove")) {
+  } else if (states.includes("strongMove")) {
     return colors[colorMode].MOVED;
-  } else if (states.has("weakMove")) {
+  } else if (states.includes("weakMove")) {
     return weakenColor(colors[colorMode].MOVED, 0.45);
-  } else if (states.has("strongAddition")) {
+  } else if (states.includes("strongAddition")) {
     return colors[colorMode].ADDITION;
-  } else if (states.has("weakAddition")) {
+  } else if (states.includes("weakAddition")) {
     return weakenColor(colors[colorMode].ADDITION, 0.45);
   }
 
   return;
 };
 
-export const InnerTextWrapper: React.FC<{
-  innerTextId: string;
+export const SpanWrapper: React.FC<{
+  rangeIds: string[];
   nodesStore: NodesStore;
   element: HTMLElement;
-  addRangeState: (state: InnerTextState) => void;
-  removeRangeState: (state: InnerTextState) => void;
-}> = ({ innerTextId, element, addRangeState, removeRangeState }) => {
-  const innerTextState = useInnerTextState(
-    (state) => state.innerTextStates[innerTextId],
+}> = ({ rangeIds, element }) => {
+  const rangesStates = rangeIds.map((rangeId) =>
+    useRangeState((state) => state.rangeStates[rangeId]),
   );
+  const states = compact(rangesStates).flat();
   const colorMode = useColorMode((state) => state.colorMode);
-  const color = getColor(
-    innerTextState ?? new Set<InnerTextState>(),
-    colorMode,
-  );
+  const color = getColor(states, colorMode);
+
+  const addRangeState = useRangeState((state) => state.addRangeState);
+  const removeRangeState = useRangeState((state) => state.removeRangeState);
 
   const ref: RefObject<HTMLDivElement | null> = useRef(null);
   useEffect(() => {
@@ -62,8 +59,16 @@ export const InnerTextWrapper: React.FC<{
         transition: "background-color 200ms ease",
         cursor: "pointer",
       }}
-      onMouseEnter={() => addRangeState("highlight")}
-      onMouseLeave={() => removeRangeState("highlight")}
+      onMouseEnter={() => {
+        for (const rangeId of rangeIds) {
+          addRangeState(rangeId, "highlight");
+        }
+      }}
+      onMouseLeave={() => {
+        for (const rangeId of rangeIds) {
+          removeRangeState(rangeId, "highlight");
+        }
+      }}
     ></span>
   );
 };
