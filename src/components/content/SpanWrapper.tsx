@@ -10,6 +10,7 @@ import {
 import { ColorMode } from "@/services/content/getColorMode";
 import { compact, uniq } from "lodash";
 import { useRangeHandler } from "@/services/content/useRangeHandler.ts";
+import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
 
 const weakenColor = (color: string, alpha: number) => {
   const r = parseInt(color.slice(1, 3), 16);
@@ -43,6 +44,11 @@ export const SpanWrapper: React.FC<{
   const groupsRanges = uniq(
     rangeIds.map((rangeId) => rangeHandler.getRangeGroup(rangeId)).flat(),
   );
+  const groupHunkId = rangeIds.map((rangeId) =>
+    rangeHandler.getGroupParentSubject(rangeId),
+  )[0];
+  const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
+  const setSubjectHunkId = useSubjectHunkId((state) => state.setHunkId);
 
   const rangesStates = rangeIds.map((rangeId) =>
     useRangeState((state) => state.rangeStates[rangeId]),
@@ -65,9 +71,21 @@ export const SpanWrapper: React.FC<{
     <span
       ref={ref}
       style={{
-        backgroundColor: color,
+        backgroundColor:
+          subjectHunkId === groupHunkId ? colors[colorMode].HIGHLIGHT : color,
         transition: "background-color 200ms ease",
         cursor: "pointer",
+      }}
+      onClick={() => {
+        if (!groupHunkId) {
+          return;
+        }
+
+        if (subjectHunkId === groupHunkId) {
+          setSubjectHunkId(null);
+        } else {
+          setSubjectHunkId(groupHunkId);
+        }
       }}
       onMouseEnter={() => {
         for (const rangeId of groupsRanges) {
@@ -77,7 +95,7 @@ export const SpanWrapper: React.FC<{
       onMouseLeave={() => {
         for (const rangeId of groupsRanges) {
           rangeTimeouts[rangeId] = setTimeout(() => {
-            useRangeState.getState().removeRangeState(rangeId, "highlight");
+            removeRangeState(rangeId, "highlight");
           }, 500);
         }
       }}

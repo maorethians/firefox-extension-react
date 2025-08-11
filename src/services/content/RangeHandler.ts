@@ -28,6 +28,7 @@ export class RangeHandler {
   private lines: Record<string, Element> = {};
 
   private rangeParent: Record<string, string> = {};
+  private rangeSubject: Record<string, string> = {};
   private rangeGroup: Record<string, string[]> = {};
 
   private subjectOrderedHunks: Record<string, Hunk[]> = {};
@@ -580,6 +581,7 @@ export class RangeHandler {
 
       const rangeId = RangeHandler.getRangeId(hunk.node.path, "dst", hunk.node);
       this.rangeParent[rangeId] = rangeId;
+      this.rangeSubject[rangeId] = hunk.node.id;
       if (hunk.node.srcs) {
         for (const src of hunk.node.srcs) {
           await this.prepareRangeLines(src.path, "src", src);
@@ -725,6 +727,7 @@ export class RangeHandler {
 
         const element = child as HTMLElement;
 
+        // TODO: an element can be partially in a range: https://github.com/JabRef/jabref/pull/13605/commits/df72a175287c7f3d719854809734c1531eb97df3
         const isInRange = this.isInRange({ lineNumber, lineOffset }, range);
         if (isInRange) {
           if (!spans[spanId]) {
@@ -742,12 +745,17 @@ export class RangeHandler {
     if (this.rangeGroup[rangeId]) {
       return this.rangeGroup[rangeId];
     }
-    
+
     const groupParent = this.rangeParent[rangeId];
     this.rangeGroup[rangeId] = Object.entries(this.rangeParent)
       .filter(([_rangeId, parentId]) => parentId === groupParent)
       .map(([rangeId]) => rangeId);
 
     return this.rangeGroup[rangeId];
+  };
+
+  getGroupParentSubject = (rangeId: string) => {
+    const groupParent = this.rangeParent[rangeId];
+    return this.rangeSubject[groupParent];
   };
 }

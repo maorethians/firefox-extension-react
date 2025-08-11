@@ -12,26 +12,7 @@ export class LLMClient {
     this.model = LLMConfig[modelProvider].client(key);
   }
 
-  // async generate(prompt: string): Promise<string | undefined> {
-  //   const result = await this.model.invoke(prompt);
-  //
-  //   try {
-  //     if (typeof result.content === "string") {
-  //       return result.content;
-  //     }
-  //   } catch (e) {}
-  // }
-  //
-  // static async generate(prompt: string): Promise<string | undefined> {
-  //   const client = await getLLMClient();
-  //   if (!client) {
-  //     return;
-  //   }
-  //
-  //   return client.generate(prompt);
-  // }
-
-  async stream(prompt: string, tool?: StructuredToolInterface) {
+  private async stream(prompt: string, tool?: StructuredToolInterface) {
     try {
       if (!tool) {
         return this.model.stream(prompt);
@@ -56,6 +37,7 @@ export class LLMClient {
 
   static async stream(prompt: string, tool?: StructuredToolInterface) {
     console.log(prompt);
+    console.log(tool);
     const client = await getLLMClient();
     if (!client) {
       return;

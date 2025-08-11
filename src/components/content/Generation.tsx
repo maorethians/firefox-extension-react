@@ -70,7 +70,6 @@ export const Generation: React.FC<{
   const generationProcessState = generationProcess?.state;
 
   const promptIdsDetail = nodesStore.getPromptIdsDetail(id);
-  console.log(promptIdsDetail);
 
   return (
     <div style={{ color, width: "100%" }}>

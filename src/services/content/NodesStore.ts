@@ -1,4 +1,10 @@
-import { EdgeJson, Hierarchy, isAggregator, UnifiedNodeJson } from "@/types";
+import {
+  EdgeJson,
+  Hierarchy,
+  isAggregator,
+  isHunk,
+  UnifiedNodeJson,
+} from "@/types";
 import { SingularPattern } from "@/services/content/graph/SingularPattern.ts";
 import { UsagePattern } from "@/services/content/graph/UsagePattern.ts";
 import { SuccessivePattern } from "@/services/content/graph/SuccessivePattern.ts";
@@ -6,7 +12,7 @@ import { TraversalComponent } from "@/services/content/graph/TraversalComponent.
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { AIDetail, Hunk } from "@/services/content/graph/Hunk.ts";
 import { StorageKey } from "@/services/StorageKey.ts";
-import { intersection, keyBy, last, sum } from "lodash";
+import { intersection, keyBy, last, sum, uniq } from "lodash";
 import { SimilarityPattern } from "@/services/content/graph/SimilarityPattern.ts";
 
 export class NodesStore {
@@ -154,11 +160,26 @@ export class NodesStore {
   }
 
   getPromptIdsDetail(subjectId: string) {
-    const { firstGeneration, extendedGenerations } =
-      this.getDescendantHunks(subjectId);
+    const subject = this.getNodeById(subjectId);
+
+    const descendantHunks: Hunk[] = [];
+    if (isHunk(subject.node)) {
+      const generations = subject.node.aggregatorIds.map((aggregatorId) =>
+        this.getDescendantHunks(aggregatorId),
+      );
+      for (const { firstGeneration, extendedGenerations } of generations) {
+        descendantHunks.push(...firstGeneration);
+        descendantHunks.push(...extendedGenerations);
+      }
+    } else {
+      const { firstGeneration, extendedGenerations } =
+        this.getDescendantHunks(subjectId);
+      descendantHunks.push(...firstGeneration);
+      descendantHunks.push(...extendedGenerations);
+    }
 
     const details: AIDetail[] = [];
-    for (const hunk of [...firstGeneration, ...extendedGenerations]) {
+    for (const hunk of uniq(descendantHunks)) {
       const detail = hunk.getDetail(this);
       details.push(detail);
 
