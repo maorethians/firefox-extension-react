@@ -2,10 +2,8 @@ import { NodeType, UnifiedNodeJson } from "@/types";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import { AIMessageChunk } from "@langchain/core/messages";
-import { IterableReadableStream } from "@@/node_modules/@langchain/core/dist/utils/stream";
 import { ChainValues } from "@@/node_modules/@langchain/core/dist/utils/types";
 import { tool } from "@langchain/core/tools";
-import { z } from "zod";
 import {
   ProcessState,
   useGenerationProcess,
@@ -13,6 +11,7 @@ import {
 import { useDescription } from "@/services/content/useDescription.ts";
 import { useTitle } from "@/services/content/useTitle.ts";
 import { keyBy } from "lodash";
+import { z } from "zod";
 
 export abstract class BaseNode {
   node: UnifiedNodeJson;
@@ -28,49 +27,56 @@ export abstract class BaseNode {
     description: (
       idSurroundings: { promptId: string; surroundings: string[] }[],
     ) => {
-      if (idSurroundings.length === 0) {
+      const validIdSurroundings = idSurroundings.filter(
+        ({ surroundings }) => surroundings.length > 0,
+      );
+      if (validIdSurroundings.length === 0) {
         return;
       }
 
-      const idSurroundingsIndex = keyBy(
-        idSurroundings.map(({ promptId, surroundings }) => ({
+      const promptIdSurroundingsIndex = keyBy(
+        validIdSurroundings.map(({ promptId, surroundings }) => ({
           promptId,
           surroundings,
           index: 0,
         })),
-        "id",
+        "promptId",
       );
 
       return tool(
-        // TODO: should accept multiple ids
-        ({ ids }) =>
-          ids
-            .map((id) => {
-              const { surroundings, index } = idSurroundingsIndex[id];
+        ({ ids }) => {
+          const result: string[] = [];
 
-              let result =
-                "{ id: " +
-                id +
-                ", expansionSteps: " +
-                (index + 1) +
-                "/" +
-                surroundings.length +
-                " }\n";
+          for (const id of ids) {
+            if (!promptIdSurroundingsIndex[id]) {
+              continue;
+            }
 
-              if (index === surroundings.length) {
-                result += "Reached expansion limit for this code.";
-                return result;
-              }
+            const { surroundings, index } = promptIdSurroundingsIndex[id];
 
-              result += surroundings[index];
+            let subPrompt =
+              "{ id: " +
+              id +
+              ", expansionSteps: " +
+              (index + 1) +
+              "/" +
+              surroundings.length +
+              " }\n";
 
-              idSurroundingsIndex[id].index = index + 1;
+            if (index === surroundings.length) {
+              subPrompt += "Reached expansion limit for this code.";
+            } else {
+              subPrompt += surroundings[index];
+              promptIdSurroundingsIndex[id].index = index + 1;
+            }
 
-              console.log(result);
+            result.push(subPrompt);
+          }
 
-              return result;
-            })
-            .join("\n---\n"),
+          console.log(result);
+
+          return result.join("\n---\n");
+        },
         {
           name: "getSurrounding",
           description:
@@ -79,14 +85,7 @@ export abstract class BaseNode {
             " code location. The number of expansion steps is limited for each code and the tool is unable to expand" +
             " boundaries further when you reach that limit.",
           schema: z.object({
-            ids: z.array(
-              z.enum(
-                idSurroundings.map(({ promptId }) => promptId) as [
-                  string,
-                  ...string[],
-                ],
-              ),
-            ),
+            ids: z.array(z.string()),
           }),
         },
       );
@@ -180,11 +179,11 @@ export abstract class BaseNode {
       return;
     }
 
-    const generator = await LLMClient.stream(
+    const response = await LLMClient.invoke(
       this._basePromptTemplates.title(description),
     );
 
-    await this.streamField("title", generator);
+    await this.streamField("title", response);
   }
 
   stringify() {
@@ -198,12 +197,10 @@ export abstract class BaseNode {
 
   async streamField(
     fieldKey: "description" | "title",
-    generator?:
-      | ReadableStream<AIMessageChunk>
-      | IterableReadableStream<ChainValues>,
+    response?: AIMessageChunk | ChainValues,
     parentsToSet?: string[],
   ) {
-    if (!generator) {
+    if (!response) {
       return;
     }
 
@@ -228,20 +225,19 @@ export abstract class BaseNode {
         );
       };
     }
+
     setter?.("");
 
-    for await (const chunk of generator) {
-      if (chunk.content || (chunk as ChainValues).output) {
-        let content = "";
-        if (chunk.content) {
-          content = chunk.content;
-        } else if ((chunk as ChainValues).output) {
-          content = (chunk as ChainValues).output;
-        }
-
-        this.node[fieldKey] = this.node[fieldKey] + content;
-        setter?.(this.node[fieldKey]);
+    if (response.content || (response as ChainValues).output) {
+      let content = "";
+      if (response.content) {
+        content = response.content;
+      } else if ((response as ChainValues).output) {
+        content = (response as ChainValues).output;
       }
+
+      this.node[fieldKey] = content;
+      setter?.(this.node[fieldKey]);
     }
   }
 

@@ -93,8 +93,8 @@ export class TraversalComponent extends BaseNode {
     }
 
     const prompt = this.promptTemplates.description(childrenDescription);
-    const generator = await LLMClient.stream(prompt);
-    await this.streamField("description", generator, options?.parentsToSet);
+    const response = await LLMClient.invoke(prompt);
+    await this.streamField("description", response, options?.parentsToSet);
 
     await this.entitle();
   }

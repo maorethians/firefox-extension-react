@@ -312,7 +312,7 @@ export class RangeHandler {
       case 1:
       case 2:
         return {
-          extend: columns.item(0).firstElementChild?.firstElementChild,
+          extend: columns.item(0).firstElementChild,
         };
       case 3:
         // unified
@@ -359,10 +359,10 @@ export class RangeHandler {
     const expansionLinks = expansionContainer.getElementsByTagName("a");
     switch (expansionLinks.length) {
       case 0:
-        return;
+        break;
       case 1:
         expansionLinks.item(0)?.click();
-        return;
+        break;
       case 2:
         direction === "down"
           ? expansionLinks.item(0)?.click()
@@ -379,7 +379,7 @@ export class RangeHandler {
     while (true) {
       const nextRow = this.getNextRow(row, direction);
       const rowInfo = this.getRowInfo(nextRow);
-      if (rowInfo) {
+      if (rowInfo?.srcTd || rowInfo?.dstTd) {
         break;
       }
       await BPromise.delay(100);

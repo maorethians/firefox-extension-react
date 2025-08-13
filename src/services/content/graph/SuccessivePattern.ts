@@ -78,11 +78,11 @@ export class SuccessivePattern extends BaseNode {
         sequence.map((hunk) => hunk.getSurroundings(nodesStore)),
       )
     ).flat();
-    const generator = await LLMClient.stream(
+    const response = await LLMClient.invoke(
       prompt,
       this.tools.description(surroundings),
     );
-    await this.streamField("description", generator, options?.parentsToSet);
+    await this.streamField("description", response, options?.parentsToSet);
 
     await this.entitle();
   }

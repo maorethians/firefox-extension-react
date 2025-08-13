@@ -262,8 +262,8 @@ export class Hunk extends BaseNode {
     );
     const surroundings = this.getSurroundings(nodesStore);
     const tool = this.tools.description(surroundings);
-    const generator = await LLMClient.stream(prompt, tool);
-    await this.streamField("description", generator, options?.parentsToSet);
+    const response = await LLMClient.invoke(prompt, tool);
+    await this.streamField("description", response, options?.parentsToSet);
 
     await this.entitle();
   };

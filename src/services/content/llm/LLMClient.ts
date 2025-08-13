@@ -12,10 +12,10 @@ export class LLMClient {
     this.model = LLMConfig[modelProvider].client(key);
   }
 
-  private async stream(prompt: string, tool?: StructuredToolInterface) {
+  private async invoke(prompt: string, tool?: StructuredToolInterface) {
     try {
       if (!tool) {
-        return this.model.stream(prompt);
+        return this.model.invoke(prompt);
       }
 
       const tools = [tool];
@@ -29,20 +29,19 @@ export class LLMClient {
         tools,
       });
       const executor = new AgentExecutor({ agent, tools });
-      return executor.stream({ prompt });
+      return executor.invoke({ prompt });
     } catch (e) {
       return;
     }
   }
 
-  static async stream(prompt: string, tool?: StructuredToolInterface) {
+  static async invoke(prompt: string, tool?: StructuredToolInterface) {
     console.log(prompt);
-    console.log(tool);
     const client = await getLLMClient();
     if (!client) {
       return;
     }
 
-    return client.stream(prompt, tool);
+    return client.invoke(prompt, tool);
   }
 }
