@@ -1,4 +1,4 @@
-import React from "react";
+import React, { JSX } from "react";
 import { useColorMode } from "@/services/content/useColorMode.ts";
 import { colors } from "@/public/colors.ts";
 import { CircularProgress, IconButton } from "@mui/material";
@@ -22,6 +22,9 @@ import { Evaluation } from "@/services/content/Evaluation.ts";
 import { useEvaluation } from "@/services/content/useEvaluation.ts";
 import { useNodesStore } from "@/services/content/useNodesStore.ts";
 import { useRangeHandler } from "@/services/content/useRangeHandler.ts";
+import { isArray } from "lodash";
+
+const codeIdRegex = /code_[A-Z0-9]+/;
 
 export const Generation: React.FC<{
   url: string;
@@ -172,31 +175,113 @@ export const Generation: React.FC<{
           <div className={"generation"}>
             <ReactMarkdown
               components={{
-                code: (input) => {
-                  const content = input?.children as string;
-                  if (
-                    content &&
-                    content.startsWith("code_") &&
-                    promptIdsDetail[content]
+                code: ({ children }) => {
+                  let content = (children as string) ?? "";
+                  const codeIds = content.match(codeIdRegex);
+                  if (!codeIds) {
+                    return <code>{content}</code>;
+                  }
+
+                  const nonIds = content.split(codeIdRegex);
+                  const resultChildren: (string | JSX.Element)[] = [];
+                  for (
+                    let nonIdIndex = 0;
+                    nonIdIndex < nonIds.length;
+                    nonIdIndex++
                   ) {
-                    const detail = promptIdsDetail[content];
-                    return (
-                      <a
-                        onClick={() => {
-                          if (rangeHandler) {
-                            rangeHandler.scrollRange(
-                              detail.path,
-                              detail.srcDst,
-                              detail,
-                            );
-                          }
-                        }}
-                      >
-                        {content}
-                      </a>
+                    resultChildren.push(nonIds[nonIdIndex]);
+
+                    const codeId = codeIds[nonIdIndex];
+                    if (!codeId) {
+                      break;
+                    }
+
+                    const detail = promptIdsDetail[codeId];
+                    resultChildren.push(
+                      detail ? (
+                        <a
+                          onClick={() => {
+                            if (rangeHandler) {
+                              rangeHandler.scrollRange(
+                                detail.path,
+                                detail.srcDst,
+                                detail,
+                              );
+                            }
+                          }}
+                        >
+                          {codeId}
+                        </a>
+                      ) : (
+                        codeId
+                      ),
                     );
                   }
-                  return <code>{content}</code>;
+
+                  return <code>{resultChildren}</code>;
+                },
+                p: ({ children }) => {
+                  if (!children) {
+                    return <span>No Children</span>;
+                  }
+
+                  if (!isArray(children)) {
+                    return <p>{children}</p>;
+                  }
+
+                  const resultChildren = children
+                    .map((child) => {
+                      if (typeof child !== "string") {
+                        return child;
+                      }
+
+                      const codeIds = child.match(codeIdRegex);
+                      if (!codeIds) {
+                        return child;
+                      }
+
+                      const nonIds = child.split(codeIdRegex);
+                      const childResultChildren: (string | JSX.Element)[] = [];
+                      for (
+                        let nonIdIndex = 0;
+                        nonIdIndex < nonIds.length;
+                        nonIdIndex++
+                      ) {
+                        childResultChildren.push(nonIds[nonIdIndex]);
+
+                        const codeId = codeIds[nonIdIndex];
+                        if (!codeId) {
+                          break;
+                        }
+
+                        const detail = promptIdsDetail[codeId];
+                        childResultChildren.push(
+                          detail ? (
+                            <a
+                              onClick={() => {
+                                if (rangeHandler) {
+                                  rangeHandler.scrollRange(
+                                    detail.path,
+                                    detail.srcDst,
+                                    detail,
+                                  );
+                                }
+                              }}
+                            >
+                              {codeId}
+                            </a>
+                          ) : (
+                            codeId
+                          ),
+                        );
+                      }
+
+                      return childResultChildren;
+                    })
+                    .flat();
+
+                  console.log(children, resultChildren);
+                  return <p>{resultChildren}</p>;
                 },
               }}
             >

@@ -3,7 +3,7 @@ import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import { compact, partition } from "lodash";
-import { nanoid } from "nanoid";
+import { customAlphabet } from "nanoid";
 
 export type SrcDst = "src" | "dst";
 
@@ -19,6 +19,8 @@ export type AIDetail = {
   endLineOffset: number;
   srcDst: SrcDst;
 };
+
+const nanoid = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 4);
 
 export class Hunk extends BaseNode {
   declare node: HunkJson;
@@ -39,7 +41,7 @@ export class Hunk extends BaseNode {
     }
 
     if (!this.node.promptId) {
-      this.node.promptId = "code_" + nanoid(4);
+      this.node.promptId = "code_" + nanoid();
       nodesStore.updateStorage();
     }
 
@@ -75,7 +77,7 @@ export class Hunk extends BaseNode {
     const srcsDetail: AIDetail[] = [];
     for (const src of this.node.srcs) {
       if (!src.promptId) {
-        src.promptId = "code_" + nanoid(4);
+        src.promptId = "code_" + nanoid();
         shouldUpdateStorage = true;
       }
 
