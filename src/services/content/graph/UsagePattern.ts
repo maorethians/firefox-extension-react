@@ -31,7 +31,7 @@ export class UsagePattern extends BaseNode {
       const sideHunks = hasExtension ? useHunks : usedHunks;
 
       let prompt =
-        "# Change:\n\`\`\`\n" +
+        "# Subject:\n\`\`\`\n" +
         mainHunks
           .map((hunk) => hunk.promptTemplates.base(nodesStore))
           .join("\n---\n") +
@@ -61,13 +61,13 @@ export class UsagePattern extends BaseNode {
       prompt += "\n\`\`\`";
 
       prompt +=
-        "\n\n# Task:\n\`\`\`\nProvide an explanation focusing on the specific and evident purposes of the given" +
-        " change. \n\`\`\`\n\n# Guidelines:\n\`\`\`\n- Context contains pure code or explanatory content related to" +
-        " identifiers used in the change.\n- Keep the explanation focused on the change itself. Refer to the" +
-        " context only when needed to clarify identifiers or reasoning.\n- Do not summarize or paraphrase the" +
-        " context unless directly relevant to understanding the change.\n- Make explicit references to code" +
-        " elements, identifiers, and code ids in your explanation to ensure clarity and help connect the" +
-        " explanation to the code.\n\`\`\`";
+        "\n\n# Task:\n\`\`\`\nProvide an explanation focusing on the specific and evident purposes of the Subject." +
+        " \n\`\`\`\n\n# Guidelines:\n\`\`\`\n- Context contains pure code or explanatory content related to" +
+        " identifiers used in the Subject.\n- Keep the explanation focused on the Subject. Refer to the Context only" +
+        " when needed to clarify identifiers or reasoning.\n- Do not summarize or paraphrase the Context unless" +
+        " directly relevant to understanding the Subject.\n- Make explicit references to code elements, identifiers," +
+        " and code ids in your explanation to ensure clarity and help connect the explanation to the provided" +
+        " content.\n\`\`\`";
 
       return prompt;
     },

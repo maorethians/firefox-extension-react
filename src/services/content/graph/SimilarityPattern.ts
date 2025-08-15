@@ -19,13 +19,13 @@ export class SimilarityPattern extends BaseNode {
     description: (similarHunks: Hunk[], nodesStore: NodesStore) => {
       const basePrompt = this.promptTemplates.base(similarHunks, nodesStore);
 
-      let prompt = "# Change:\n\`\`\`\n" + basePrompt + "\n\`\`\`";
+      let prompt = "# Subject:\n\`\`\`\n" + basePrompt + "\n\`\`\`";
 
       prompt +=
-        "\n\n# Task:\n\`\`\`\nProvide an explanation focusing on the specific and evident purposes of applying this" +
-        " same change across these locations.\n\`\`\`\n\n# Guidelines:\n\`\`\`\n- Make explicit references to code" +
-        " elements, identifiers, and code ids in your explanation to ensure clarity and help connect the explanation" +
-        " to the code.\n\`\`\`";
+        "\n\n# Task:\n\`\`\`\nProvide an explanation focusing on the specific and evident purposes of the similar" +
+        " code segments in the Subject, considering their respective locations.\n\`\`\`\n\n# Guidelines:\n\`\`\`\n-" +
+        " Make explicit references to code elements, identifiers, and code ids in your explanation to ensure clarity" +
+        " and help connect the explanation to the provided content.\n\`\`\`";
 
       return prompt;
     },

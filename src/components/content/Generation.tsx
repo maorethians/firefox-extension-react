@@ -280,7 +280,6 @@ export const Generation: React.FC<{
                     })
                     .flat();
 
-                  console.log(children, resultChildren);
                   return <p>{resultChildren}</p>;
                 },
               }}

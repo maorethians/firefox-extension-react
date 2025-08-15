@@ -40,14 +40,14 @@ export class TraversalComponent extends BaseNode {
       const reasons = (this.node as TraversalComponentJson).reasons;
 
       prompt +=
-        "\n\n# Task:\n\`\`\`\nAnalyze the descriptions and provide a cohesive explanation that captures the" +
-        " collective intent behind the components.\n\`\`\`\n\nGuidelines:\n\`\`\`\n- Be specific: explain the" +
-        " concrete behavior or outcome they support, not just general goals.\n- Do not repeat or rephrase the same" +
-        " ideas in different words. Each point should add new insight.\n- Make explicit references to code" +
-        " elements, identifiers, and code ids in your explanation to ensure clarity and help connect the" +
-        " explanation to the code." +
+        "\n\n# Task:\n\`\`\`\nAnalyze the Code Components Description and provide a cohesive explanation" +
+        " that captures the collective intent behind the components.\n\`\`\`\n\nGuidelines:\n\`\`\`\n- Be specific:" +
+        " explain the concrete behavior or outcome they support, not just general goals.\n- Do not repeat or" +
+        " rephrase the same ideas in different words. Each point should add new insight.\n- Make explicit references" +
+        " to code elements, identifiers, and code ids in your explanation to ensure clarity and help connect the" +
+        " explanation to the provided content." +
         (reasons
-          ? "\n- Use common code snippets to find relations between components as needed in your explanation."
+          ? "\n- Use Common Code Snippets to find relations between components as needed in your explanation."
           : "") +
         "\n\`\`\`\n";
 

@@ -7,15 +7,14 @@ import { Steps } from "@/components/popup/Steps.tsx";
 // TODO: retry on service down
 // TODO: inject on unified/split
 // TODO: scroll in hunk mode
+// TODO: enrich some minimal hunks (simpleName, parameter declaration,...) with their type in the prompte
 
 // TODO: not talk about "reference" in code ids
-// TODO: change "Change" heading when it is only addition
-// TODO: can we find sub clusters within cluster which are the most important ones?
 // TODO: layered navigation
 // TODO: give tooltip for most of buttons
 // TODO: auto scroll on subject change
 
-// TODO: doesn't call tool that much
+// TODO: can we find sub clusters within cluster which are the most important ones?
 
 function App() {
   return (

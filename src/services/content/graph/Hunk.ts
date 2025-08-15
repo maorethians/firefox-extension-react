@@ -11,6 +11,7 @@ export type AIDetail = {
   promptId: string;
   surroundings: string[];
   content: string;
+  astType: string;
   contextString: string;
   path: string;
   startLine: number;
@@ -48,6 +49,7 @@ export class Hunk extends BaseNode {
     this.detailCache = {
       promptId: this.node.promptId,
       content: this.node.content,
+      astType: this.node.astType,
       contextString: this.getContextString(nodesStore),
       surroundings: this.getContexts(nodesStore)
         .filter((context) => context.nodeType === "SEMANTIC_CONTEXT")
@@ -89,6 +91,7 @@ export class Hunk extends BaseNode {
       srcsDetail.push({
         promptId: src.promptId,
         content: src.content,
+        astType: src.astType,
         contextString: this.representContextString(
           locationContexts.map((context) => context.content),
         ),
@@ -152,6 +155,7 @@ export class Hunk extends BaseNode {
             if (contextString) {
               subPrompt += ", location: " + contextString;
             }
+            // subPrompt += ", astType: " + astType;
             subPrompt += " }\n";
             subPrompt += content;
 
@@ -166,6 +170,7 @@ export class Hunk extends BaseNode {
       if (contextString) {
         prompt += ", location: " + contextString;
       }
+      // prompt += ", astType: " + astType;
       prompt += " }\n";
       prompt += content;
 
@@ -174,7 +179,7 @@ export class Hunk extends BaseNode {
     description: (aggregatorsDescription: string[], nodesStore: NodesStore) => {
       const basePrompt = this.promptTemplates.base(nodesStore);
 
-      let prompt = `# Change:\n\`\`\`\n` + basePrompt + "\n\`\`\`\n";
+      let prompt = `# Subject:\n\`\`\`\n` + basePrompt + "\n\`\`\`\n";
       if (aggregatorsDescription.length !== 0) {
         prompt +=
           "\n# Context:\n\`\`\`\n" +
@@ -185,9 +190,9 @@ export class Hunk extends BaseNode {
       }
 
       prompt +=
-        `\n# Task:\n\`\`\`\nIdentify and explain the specific role or function of the given change ${aggregatorsDescription.length !== 0 ? "within the provided context" : ""}.\n\`\`\`\n\n# Guidelines:\n\`\`\`\n- Make explicit references to code elements, identifiers, and code ids in your explanation to ensure clarity and help connect the explanation to the code.\n` +
+        `\n# Task:\n\`\`\`\nIdentify and explain the specific role or function of the Subject ${aggregatorsDescription.length !== 0 ? "within the Context" : ""}.\n\`\`\`\n\n# Guidelines:\n\`\`\`\n- Make explicit references to code elements, identifiers, and code ids in your explanation to ensure clarity and help connect the explanation to the provided content.\n` +
         (aggregatorsDescription.length !== 0
-          ? `- Focus on how the change contributes to the surrounding logic, structure, or behavior described in the context.\n- Avoid rephrasing or summarizing the full context.\n`
+          ? `- Focus on how the Subject contributes to the surrounding logic, structure, or behavior described in the Context.\n- Avoid rephrasing or summarizing the full Context.\n`
           : "") +
         "\`\`\`";
 

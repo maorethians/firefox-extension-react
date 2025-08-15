@@ -31,6 +31,7 @@ export type HunkJson = BaseNodeJson & {
   srcs?: ({
     path: string;
     content: string;
+    astType: string;
     promptId?: string;
     contexts: {
       content: string;
@@ -39,6 +40,7 @@ export type HunkJson = BaseNodeJson & {
   } & Range)[];
   dsts?: Range[];
   nodeType: "BASE" | "LOCATION_CONTEXT" | "SEMANTIC_CONTEXT" | "EXTENSION";
+  astType: string;
 } & Range;
 
 export type EdgeType =

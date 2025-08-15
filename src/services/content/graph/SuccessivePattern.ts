@@ -48,12 +48,13 @@ export class SuccessivePattern extends BaseNode {
     description: (sequence: Hunk[], nodesStore: NodesStore) => {
       const basePrompt = this.promptTemplates.base(sequence, nodesStore);
 
-      let prompt = "# Change:\n\`\`\`\n" + basePrompt + "\n\`\`\`";
+      let prompt = "# Subject:\n\`\`\`\n" + basePrompt + "\n\`\`\`";
 
       prompt +=
-        "\n\n# Task:\n\`\`\`\nProvide an explanation focusing on the specific and evident purposes of the given" +
-        " change.\n\`\`\`\n\n# Guidelines:\n\`\`\`\n- Make explicit references to code elements, identifiers, and" +
-        " code ids in your explanation to ensure clarity and help connect the explanation to the code.\n\`\`\`";
+        "\n\n# Task:\n\`\`\`\nProvide an explanation focusing on the specific and evident purposes of the" +
+        " Subject.\n\`\`\`\n\n# Guidelines:\n\`\`\`\n- Treat the items in the Subject as consecutive segments from" +
+        " the source code. \n- Make explicit references to code elements, identifiers, and code ids in your" +
+        " explanation to ensure clarity and help connect the explanation to the provided content.\n\`\`\`";
 
       return prompt;
     },
