@@ -29,19 +29,19 @@ export class Narrator {
       return;
     }
 
-    const targetNodes = this.nodesStore.edges
+    const subNodes = this.nodesStore.edges
       .filter(
         ({ type, sourceId }) => type === "EXPANSION" && sourceId === subjectId,
       )
       .map(({ targetId }) => this.nodesStore.getNodeById(targetId));
 
-    const aggregatorTargetNodes = targetNodes.filter(
+    const subAggregatorNodes = subNodes.filter(
       ({ node }) =>
         isAggregator(node) &&
         !this.story.includes(node.id) &&
         !stack.includes(node.id),
     );
-    const depthSortedIds = aggregatorTargetNodes
+    const depthSortedIds = subAggregatorNodes
       .map(({ node }) => ({
         id: node.id,
         depth: this.nodesStore.getNodeBranches(node.id),
@@ -53,28 +53,27 @@ export class Narrator {
       this.dfs(stack);
     }
 
-    if (targetNodes.length === 1 && isAggregator(targetNodes[0].node)) {
-      const childId = targetNodes[0].node.id;
-      this.story = this.story.filter((id) => id !== childId);
+    if (subNodes.length === 1 && isAggregator(subNodes[0].node)) {
+      const subNodeId = subNodes[0].node.id;
+      this.story = this.story.filter((id) => id !== subNodeId);
     }
 
-    const subject = this.nodesStore.getNodeById(subjectId);
-    this.story.push(subject.node.id);
+    this.story.push(subjectId);
 
     stack.pop();
   };
 
-  beginStory = () => {
+  begin = () => {
     useSubjectId.getState().setSubjectId(this.story[0]);
   };
 
-  previousChapter = () => {
+  previous = () => {
     const currentIndex = this.currentIndex();
     const previousIndex = Math.max(0, currentIndex - 1);
     useSubjectId.getState().setSubjectId(this.story[previousIndex]);
   };
 
-  nextChapter = () => {
+  next = () => {
     const currentIndex = this.currentIndex();
     const nextIndex = Math.min(this.story.length - 1, currentIndex + 1);
     useSubjectId.getState().setSubjectId(this.story[nextIndex]);

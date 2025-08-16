@@ -106,7 +106,7 @@ export const ControlPanel: React.FC<{
             <IconButton
               disabled={currentIndex === 0 || !!subjectHunkId}
               style={{ height: "100%" }}
-              onClick={narrator.beginStory}
+              onClick={narrator.begin}
             >
               <GoToStart
                 style={{
@@ -119,7 +119,7 @@ export const ControlPanel: React.FC<{
             <IconButton
               disabled={currentIndex === 0 || !!subjectHunkId}
               style={{ height: "100%" }}
-              onClick={narrator.previousChapter}
+              onClick={narrator.previous}
             >
               <Previous
                 style={{
@@ -132,7 +132,7 @@ export const ControlPanel: React.FC<{
             <IconButton
               disabled={currentIndex === storyLength - 1 || !!subjectHunkId}
               style={{ height: "100%" }}
-              onClick={narrator.nextChapter}
+              onClick={narrator.next}
             >
               <Next
                 style={{
