@@ -1,4 +1,4 @@
-import { isAggregator, isHunk, UsagePatternJson } from "@/types";
+import { EdgeType, isAggregator, isHunk, UsagePatternJson } from "@/types";
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
@@ -131,8 +131,8 @@ export class UsagePattern extends BaseNode {
       return this.useHunksCache;
     }
 
-    const useHunks = nodesStore.edges
-      .filter((edge) => edge.type === "DEF_USE")
+    const useHunks = nodesStore
+      .getTypeEdges(EdgeType.DEF_USE)
       .map((edge) => nodesStore.getNodeById(edge.targetId))
       .filter(({ node }) => node.aggregatorIds.includes(this.node.id))
       .filter(({ node }) => isHunk(node)) as Hunk[];
@@ -149,10 +149,10 @@ export class UsagePattern extends BaseNode {
     const useHunks = this.getUseHunks(nodesStore);
     const useHunksId = useHunks.map((useNode) => useNode.node.id);
 
-    const usedNodes = nodesStore.edges
-      .filter(
-        (edge) => edge.type === "DEF_USE" && useHunksId.includes(edge.targetId),
-      )
+    const usedNodes = useHunksId
+      .map((hunkId) => nodesStore.getTargetEdges(hunkId))
+      .flat()
+      .filter((edge) => edge.type === "DEF_USE")
       .map(
         (edge) => nodesStore.getNodeById(edge.sourceId) as Hunk | UsagePattern,
       );

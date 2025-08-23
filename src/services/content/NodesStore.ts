@@ -1,5 +1,6 @@
 import {
   EdgeJson,
+  EdgeType,
   Hierarchy,
   isAggregator,
   isHunk,
@@ -12,7 +13,15 @@ import { TraversalComponent } from "@/services/content/graph/TraversalComponent.
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
 import { AIDetail, Hunk } from "@/services/content/graph/Hunk.ts";
 import { StorageKey } from "@/services/StorageKey.ts";
-import { intersection, keyBy, last, sum, uniq } from "lodash";
+import {
+  Dictionary,
+  groupBy,
+  intersection,
+  keyBy,
+  last,
+  sum,
+  uniq,
+} from "lodash";
 import { SimilarityPattern } from "@/services/content/graph/SimilarityPattern.ts";
 
 export class NodesStore {
@@ -23,11 +32,18 @@ export class NodesStore {
     string,
     { firstGeneration: Hunk[]; extendedGenerations: Hunk[] }
   > = {};
-  edges: EdgeJson[] = [];
+  private readonly edges: EdgeJson[] = [];
+  private readonly sourceEdges: Dictionary<EdgeJson[]> = {};
+  private readonly targetEdges: Dictionary<EdgeJson[]> = {};
+  private readonly typeEdges: Dictionary<EdgeJson[]> = {};
 
   constructor(url: string, { nodes, edges }: Hierarchy) {
     this.url = url;
     this.edges = edges;
+
+    this.sourceEdges = groupBy(edges, "sourceId");
+    this.targetEdges = groupBy(edges, "targetId");
+    this.typeEdges = groupBy(edges, "type");
 
     this.init(nodes);
   }
@@ -75,10 +91,8 @@ export class NodesStore {
       return;
     }
 
-    const targetNodes = this.edges
-      .filter(
-        ({ type, sourceId }) => type === "EXPANSION" && sourceId === subjectId,
-      )
+    const targetNodes = this.getSourceEdges(subjectId)
+      .filter(({ type }) => type === "EXPANSION")
       .map(({ targetId }) => this.getNodeById(targetId))
       .filter(
         ({ node }) =>
@@ -103,6 +117,14 @@ export class NodesStore {
 
     stack.pop();
   };
+
+  getEdges = () => this.edges;
+
+  getSourceEdges = (sourceId: string) => this.sourceEdges[sourceId] ?? [];
+
+  getTargetEdges = (targetId: string) => this.targetEdges[targetId] ?? [];
+
+  getTypeEdges = (type: EdgeType) => this.typeEdges[type] ?? [];
 
   getNodeBranches(id: string) {
     return this.nodesBranches[id];

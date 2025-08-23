@@ -108,7 +108,7 @@ export class Evaluation {
           target: edge.targetId,
           type: edge.type,
         })),
-        story: narrator.story,
+        story: narrator.baseStory,
         evaluations: urlEvaluation,
       };
     }

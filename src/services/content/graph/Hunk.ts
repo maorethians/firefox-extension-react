@@ -209,9 +209,9 @@ export class Hunk extends BaseNode {
 
     let current = nodesStore.getNodeById(this.node.id);
     while (true) {
-      const edgeToNext = nodesStore.edges.find(
-        (edge) => edge.type === "CONTEXT" && edge.sourceId === current.node.id,
-      );
+      const edgeToNext = nodesStore
+        .getSourceEdges(current.node.id)
+        .find((edge) => edge.type === "CONTEXT");
       if (!edgeToNext) {
         break;
       }

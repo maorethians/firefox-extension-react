@@ -14,8 +14,6 @@ import { Steps } from "@/components/popup/Steps.tsx";
 // TODO: give tooltip for most of buttons
 // TODO: auto scroll on subject change
 
-// TODO: can we find sub clusters within cluster which are the most important ones?
-
 function App() {
   return (
     <div>

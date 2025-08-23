@@ -23,10 +23,9 @@ export class SuccessivePattern extends BaseNode {
 
     while (true) {
       const current = last(sequence);
-      const edgeToNext = nodesStore.edges.find(
-        (edge) =>
-          edge.type === "SUCCESSION" && edge.sourceId === current!.node.id,
-      );
+      const edgeToNext = nodesStore
+        .getSourceEdges(current!.node.id)
+        .find((edge) => edge.type === "SUCCESSION");
       if (!edgeToNext) {
         break;
       }

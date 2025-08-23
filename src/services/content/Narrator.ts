@@ -1,11 +1,26 @@
-import { last } from "lodash";
+import { last, partition } from "lodash";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { isAggregator } from "@/types";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
+import { Chapter, Chapterize } from "@/services/content/Chapterize.ts";
+
+export type StoryType =
+  | "context"
+  | "similar"
+  | "common"
+  | "requirements"
+  | "base";
 
 export class Narrator {
   private nodesStore: NodesStore;
-  story: string[] = [];
+
+  private baseStory: Chapter[] = [];
+  private readonly requirementsStory: Chapter[];
+  private readonly commonStory: Chapter[];
+  private readonly similarStory: Chapter[];
+  private readonly contextStory: Chapter[];
+
+  activeStory: Chapter[];
 
   constructor(nodesStore: NodesStore) {
     this.nodesStore = nodesStore;
@@ -17,6 +32,15 @@ export class Narrator {
 
     const stack = [rootNode.node.id];
     this.dfs(stack);
+
+    const { requirementsStory, commonStory, similarStory, contextStory } =
+      new Chapterize(this.nodesStore).getPrunedStories(this.baseStory);
+    this.requirementsStory = requirementsStory;
+    this.commonStory = commonStory;
+    this.similarStory = similarStory;
+    this.contextStory = contextStory;
+
+    this.activeStory = this.baseStory;
   }
 
   private dfs = (stack: string[]) => {
@@ -25,21 +49,20 @@ export class Narrator {
     }
 
     const subjectId = last(stack)!;
-    if (this.story.includes(subjectId)) {
+    if (this.baseStory.some((chapter) => chapter.nodeId === subjectId)) {
       return;
     }
 
-    const subNodes = this.nodesStore.edges
-      .filter(
-        ({ type, sourceId }) => type === "EXPANSION" && sourceId === subjectId,
-      )
+    const subNodes = this.nodesStore
+      .getSourceEdges(subjectId)
+      .filter(({ type }) => type === "EXPANSION")
       .map(({ targetId }) => this.nodesStore.getNodeById(targetId));
 
     const subAggregatorNodes = subNodes.filter(
       ({ node }) =>
         isAggregator(node) &&
-        !this.story.includes(node.id) &&
-        !stack.includes(node.id),
+        this.baseStory.every((chapter) => chapter.nodeId !== node.id) &&
+        stack.every((stackNodeId) => stackNodeId !== node.id),
     );
     const depthSortedIds = subAggregatorNodes
       .map(({ node }) => ({
@@ -53,32 +76,86 @@ export class Narrator {
       this.dfs(stack);
     }
 
+    const chapter: Chapter = {
+      nodeId: subjectId,
+      subStory: [],
+    };
+
     if (subNodes.length === 1 && isAggregator(subNodes[0].node)) {
       const subNodeId = subNodes[0].node.id;
-      this.story = this.story.filter((id) => id !== subNodeId);
+      const [subNodeChapters, restStory] = partition(
+        this.baseStory,
+        (chapter) => chapter.nodeId === subNodeId,
+      );
+
+      this.baseStory = restStory;
+
+      const subNodeChapter = subNodeChapters[0];
+      if (subNodeChapter) {
+        chapter.represents = [
+          subNodeChapter.nodeId,
+          ...(subNodeChapter.represents ?? []),
+        ];
+      }
     }
 
-    this.story.push(subjectId);
+    this.baseStory.push(chapter);
 
     stack.pop();
   };
 
+  setActiveStory(storyType: StoryType) {
+    switch (storyType) {
+      case "context":
+        this.activeStory = this.contextStory;
+        break;
+      case "similar":
+        this.activeStory = this.similarStory;
+        break;
+      case "common":
+        this.activeStory = this.commonStory;
+        break;
+      case "requirements":
+        this.activeStory = this.requirementsStory;
+        break;
+      case "base":
+        this.activeStory = this.baseStory;
+    }
+  }
+
   begin = () => {
-    useSubjectId.getState().setSubjectId(this.story[0]);
+    this.goto(0);
   };
 
   previous = () => {
     const currentIndex = this.currentIndex();
     const previousIndex = Math.max(0, currentIndex - 1);
-    useSubjectId.getState().setSubjectId(this.story[previousIndex]);
+    this.goto(previousIndex);
   };
 
   next = () => {
     const currentIndex = this.currentIndex();
-    const nextIndex = Math.min(this.story.length - 1, currentIndex + 1);
-    useSubjectId.getState().setSubjectId(this.story[nextIndex]);
+    const nextIndex = Math.min(this.baseStory.length - 1, currentIndex + 1);
+    this.goto(nextIndex);
   };
 
-  currentIndex = () =>
-    this.story.findIndex((id) => id === useSubjectId.getState().subjectId);
+  goto = (index: number) => {
+    useSubjectId.getState().setSubjectId(this.activeStory[index].nodeId);
+  };
+
+  currentIndex = () => {
+    const index = this.activeStory.findIndex(
+      (chapter) => chapter.nodeId === useSubjectId.getState().subjectId,
+    );
+    if (index !== -1) {
+      return index;
+    }
+
+    // TODO: find relevant index and set subject
+    const availableIndex = this.activeStory.length - 1;
+    useSubjectId
+      .getState()
+      .setSubjectId(this.activeStory[availableIndex].nodeId);
+    return availableIndex;
+  };
 }

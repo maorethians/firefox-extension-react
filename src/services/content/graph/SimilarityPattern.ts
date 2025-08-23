@@ -43,13 +43,13 @@ export class SimilarityPattern extends BaseNode {
       return;
     }
 
-    const leadId = nodesStore.edges
-      .filter(
-        (edge) => edge.type === "EXPANSION" && edge.sourceId === this.node.id,
-      )
+    const leadId = nodesStore
+      .getSourceEdges(this.node.id)
+      .filter((edge) => edge.type === "EXPANSION")
       .map((edge) => edge.targetId)[0];
-    const leadSimilarNodesId = nodesStore.edges
-      .filter((edge) => edge.type === "SIMILARITY" && edge.sourceId === leadId)
+    const leadSimilarNodesId = nodesStore
+      .getSourceEdges(leadId)
+      .filter((edge) => edge.type === "SIMILARITY")
       .map((edge) => edge.targetId);
     const similarNodesId = [leadId, ...leadSimilarNodesId];
     const similarNodes = similarNodesId.map(

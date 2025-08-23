@@ -36,9 +36,9 @@ export class SingularPattern extends BaseNode {
   }
 
   getDependencies(nodesStore: NodesStore): BaseNode[] {
-    const leadEdge = nodesStore.edges.filter(
-      (edge) => edge.type === "EXPANSION" && edge.sourceId === this.node.id,
-    )[0];
+    const leadEdge = nodesStore
+      .getSourceEdges(this.node.id)
+      .filter((edge) => edge.type === "EXPANSION")[0];
     if (!leadEdge) {
       return [];
     }

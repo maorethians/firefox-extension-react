@@ -43,12 +43,13 @@ export type HunkJson = BaseNodeJson & {
   astType: string;
 } & Range;
 
-export type EdgeType =
-  | "DEF_USE"
-  | "SIMILARITY"
-  | "SUCCESSION"
-  | "CONTEXT"
-  | "EXPANSION";
+export enum EdgeType {
+  DEF_USE = "DEF_USE",
+  SIMILARITY = "SIMILARITY",
+  SUCCESSION = "SUCCESSION",
+  CONTEXT = "CONTEXT",
+  EXPANSION = "EXPANSION",
+}
 
 export interface EdgeJson {
   sourceId: string;
@@ -89,7 +90,8 @@ export type SimilarityPatternJson = BaseNodeJson & {
 export type ReasonType = "COMMON" | "SIMILAR";
 
 export type TraversalComponentJson = BaseNodeJson & {
-  reasons: string[];
+  // TODO: id should be enough
+  reasons: { id: string; content: string }[];
   reasonType: ReasonType;
   nodeType: "COMPONENT";
 };

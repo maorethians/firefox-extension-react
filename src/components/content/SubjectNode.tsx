@@ -108,7 +108,6 @@ export const SubjectNode: React.FC<{
         >
           {title || shadowTitle}
         </h3>
-
         <IconButton
           style={{ height: "35px", marginLeft: "20px" }}
           onClick={() => setExtension("generation", !isGeneration)}
@@ -121,18 +120,19 @@ export const SubjectNode: React.FC<{
             }}
           />
         </IconButton>
-        <IconButton
-          style={{ height: "35px" }}
-          onClick={() => setExtension("navigation", !isNavigation)}
-        >
-          <Navigation
-            style={{
-              width: "100%",
-              height: "100%",
-              color: isNavigation ? highlightColor : color,
-            }}
-          />
-        </IconButton>
+        {/* TODO: navigator lib error*/}
+        {/*<IconButton*/}
+        {/*  style={{ height: "35px" }}*/}
+        {/*  onClick={() => setExtension("navigation", !isNavigation)}*/}
+        {/*>*/}
+        {/*  <Navigation*/}
+        {/*    style={{*/}
+        {/*      width: "100%",*/}
+        {/*      height: "100%",*/}
+        {/*      color: isNavigation ? highlightColor : color,*/}
+        {/*    }}*/}
+        {/*  />*/}
+        {/*</IconButton>*/}
         {subjectHunkId && (
           <IconButton
             style={{ height: "35px" }}

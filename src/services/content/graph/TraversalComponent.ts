@@ -25,7 +25,9 @@ export class TraversalComponent extends BaseNode {
       const reasonType = (this.node as TraversalComponentJson).reasonType;
       if (reasonType) {
         // TODO: reasons can be made agentic
-        const reasons = (this.node as TraversalComponentJson).reasons;
+        const reasons = (this.node as TraversalComponentJson).reasons.map(
+          (reason) => reason.content,
+        );
         prompt +=
           "\nCommon Code Snippets:\n\`\`\`\n" +
           reasons.join("\n---\n") +
@@ -104,10 +106,9 @@ export class TraversalComponent extends BaseNode {
       return this.dependenciesCache;
     }
 
-    this.dependenciesCache = nodesStore.edges
-      .filter(
-        (edge) => edge.type === "EXPANSION" && edge.sourceId === this.node.id,
-      )
+    this.dependenciesCache = nodesStore
+      .getSourceEdges(this.node.id)
+      .filter((edge) => edge.type === "EXPANSION")
       .map((edge) => nodesStore.getNodeById(edge.targetId));
 
     return this.dependenciesCache;
