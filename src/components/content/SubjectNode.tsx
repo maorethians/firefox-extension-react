@@ -40,7 +40,9 @@ export const SubjectNode: React.FC<{
   if (isHunk(node)) {
     shadowNode = node;
   } else {
-    const { firstGeneration } = nodesStore.getDescendantHunks(id);
+    const { firstGeneration } = nodesStore
+      .getNodeById(id)
+      .getDescendantHunks(nodesStore);
     shadowNode = firstGeneration[0].node;
     for (const { node: generationNode } of firstGeneration) {
       if (

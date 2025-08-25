@@ -1,5 +1,5 @@
 import { SimilarityPatternJson } from "@/types";
-import { BaseNode } from "@/services/content/graph/BaseNode.ts";
+import { BaseNode, GenerationType } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
@@ -74,4 +74,14 @@ export class SimilarityPattern extends BaseNode {
   shouldGenerate(_nodesStore: NodesStore): boolean {
     return true;
   }
+
+  getDescendantHunks = (nodesStore: NodesStore) => {
+    const { firstGeneration, extendedGenerations } =
+      super.getUntypedDescendantHunks(nodesStore);
+    return {
+      firstGeneration,
+      firstGenerationType: GenerationType.Similarity,
+      extendedGenerations,
+    };
+  };
 }

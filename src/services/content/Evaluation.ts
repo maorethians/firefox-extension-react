@@ -10,6 +10,7 @@ import { StorageKey } from "@/services/StorageKey.ts";
 import { EdgeType, Hierarchy, NodeType } from "@/types";
 import { Narrator } from "@/services/content/Narrator.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
+import { Chapter } from "@/services/content/Chapterize.ts";
 
 const EVALUATION_STORAGE_KEY: StorageItemKey =
   "local:changeNarrator:evaluation";
@@ -28,7 +29,7 @@ export type ExportedEvaluation = Record<
       target: string;
       type: EdgeType;
     }[];
-    story: string[];
+    story: Chapter[];
     evaluations: StorageEvaluation;
   }
 >;
@@ -108,7 +109,7 @@ export class Evaluation {
           target: edge.targetId,
           type: edge.type,
         })),
-        story: narrator.baseStory,
+        story: narrator.activeStory,
         evaluations: urlEvaluation,
       };
     }

@@ -202,8 +202,9 @@ export class RangeHandler {
   }
 
   private addSubjectState() {
-    const { firstGeneration, extendedGenerations } =
-      this.nodesStore.getDescendantHunks(useSubjectId.getState().subjectId);
+    const { firstGeneration, extendedGenerations } = this.nodesStore
+      .getNodeById(useSubjectId.getState().subjectId)
+      .getDescendantHunks(this.nodesStore);
 
     this.addGenerationState(firstGeneration, "strong");
     this.addGenerationState(extendedGenerations, "weak");
@@ -441,9 +442,9 @@ export class RangeHandler {
       return this.subjectOrderedHunks[subjectId];
     }
 
-    const { firstGeneration } = this.nodesStore.getDescendantHunks(
-      useSubjectId.getState().subjectId,
-    );
+    const { firstGeneration } = this.nodesStore
+      .getNodeById(useSubjectId.getState().subjectId)
+      .getDescendantHunks(this.nodesStore);
     const fileOrderHunks = groupBy(
       firstGeneration.map((hunk) => ({
         hunk,
@@ -574,8 +575,9 @@ export class RangeHandler {
   }
 
   private prepare = async () => {
-    const { firstGeneration, extendedGenerations } =
-      this.nodesStore.getDescendantHunks("root");
+    const { firstGeneration, extendedGenerations } = this.nodesStore
+      .getNodeById("root")
+      .getDescendantHunks(this.nodesStore);
     for (const hunk of [...firstGeneration, ...extendedGenerations]) {
       await this.prepareRangeLines(hunk.node.path, "dst", hunk.node);
 
@@ -655,8 +657,9 @@ export class RangeHandler {
     const spans: Record<string, { element: Element; rangeIds: Set<string> }> =
       {};
 
-    const { firstGeneration, extendedGenerations } =
-      this.nodesStore.getDescendantHunks("root");
+    const { firstGeneration, extendedGenerations } = this.nodesStore
+      .getNodeById("root")
+      .getDescendantHunks(this.nodesStore);
     for (const hunk of [...firstGeneration, ...extendedGenerations]) {
       this.populateRangeSpans(spans, hunk.node.path, "dst", hunk.node);
       if (hunk.node.srcs) {

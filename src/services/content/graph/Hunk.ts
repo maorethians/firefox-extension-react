@@ -1,8 +1,8 @@
 import { HunkJson } from "@/types";
-import { BaseNode } from "@/services/content/graph/BaseNode.ts";
+import { BaseNode, GenerationType } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
-import { compact, partition } from "lodash";
+import { compact, keyBy, partition } from "lodash";
 import { customAlphabet } from "nanoid";
 
 export type SrcDst = "src" | "dst";
@@ -284,5 +284,39 @@ export class Hunk extends BaseNode {
 
   shouldGenerate(_nodesStore: NodesStore): boolean {
     return true;
+  }
+
+  getDescendantHunks = (_nodesStore: NodesStore) => {
+    const firstGeneration: Hunk[] = [];
+    const extendedGenerations: Hunk[] = [];
+    return {
+      firstGeneration,
+      firstGenerationType: GenerationType.Hunk,
+      extendedGenerations,
+    };
+  };
+
+  getPromptIdsDetail(nodesStore: NodesStore) {
+    const descendantHunks: Hunk[] = [];
+    const generations = this.node.aggregatorIds.map((aggregatorId) =>
+      nodesStore.getNodeById(aggregatorId).getDescendantHunks(nodesStore),
+    );
+    for (const { firstGeneration, extendedGenerations } of generations) {
+      descendantHunks.push(...firstGeneration);
+      descendantHunks.push(...extendedGenerations);
+    }
+
+    const details: AIDetail[] = [];
+    for (const hunk of descendantHunks) {
+      const detail = hunk.getDetail(nodesStore);
+      details.push(detail);
+
+      const srcsDetail = hunk.getSrcsDetail(nodesStore);
+      if (srcsDetail) {
+        details.push(...srcsDetail);
+      }
+    }
+
+    return keyBy(details, "promptId");
   }
 }

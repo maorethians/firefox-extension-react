@@ -1,5 +1,9 @@
 import { SingularPatternJson } from "@/types";
-import { BaseNode } from "@/services/content/graph/BaseNode.ts";
+import {
+  BaseNode,
+  DescendantHunks,
+  GenerationType,
+} from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 
 export class SingularPattern extends BaseNode {
@@ -45,5 +49,15 @@ export class SingularPattern extends BaseNode {
 
     const lead = nodesStore.getNodeById(leadEdge.targetId);
     return [lead];
+  }
+
+  getDescendantHunks(nodesStore: NodesStore): DescendantHunks {
+    const { firstGeneration, extendedGenerations } =
+      super.getUntypedDescendantHunks(nodesStore);
+    return {
+      firstGeneration,
+      firstGenerationType: GenerationType.Singular,
+      extendedGenerations,
+    };
   }
 }

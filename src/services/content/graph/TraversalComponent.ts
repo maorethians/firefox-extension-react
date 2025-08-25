@@ -1,13 +1,18 @@
 import { ClusterJson, RootJson, TraversalComponentJson } from "@/types";
-import { BaseNode } from "@/services/content/graph/BaseNode.ts";
+import {
+  BaseNode,
+  DescendantHunks,
+  GenerationType,
+} from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import { useDescription } from "@/services/content/useDescription.ts";
-import { compact } from "lodash";
+import { compact, partition, uniqBy } from "lodash";
 
 export class TraversalComponent extends BaseNode {
   declare node: TraversalComponentJson | ClusterJson | RootJson;
   private dependenciesCache: BaseNode[] | null = null;
+  private descendantHunksCache: DescendantHunks | null = null;
 
   constructor(node: TraversalComponentJson | ClusterJson | RootJson) {
     super(node);
@@ -118,4 +123,61 @@ export class TraversalComponent extends BaseNode {
     const children = this.getDependencies(nodesStore);
     return children.length > 1;
   }
+
+  // TODO: get referred promptIds and highlight them
+  getDescendantHunks = (nodesStore: NodesStore) => {
+    if (this.descendantHunksCache) {
+      return this.descendantHunksCache;
+    }
+
+    const children = this.getDependencies(nodesStore);
+    const childrenDescendentHunks = children.map((child) =>
+      child.getDescendantHunks(nodesStore),
+    );
+
+    let highestPriorityGenerationType = GenerationType.Hunk;
+    for (const childDescendentHunks of childrenDescendentHunks) {
+      if (
+        childDescendentHunks.firstGenerationType < highestPriorityGenerationType
+      ) {
+        highestPriorityGenerationType =
+          childDescendentHunks.firstGenerationType;
+      }
+    }
+
+    const [prioritizedDescendantHunks, commonDescendantHunks] = partition(
+      childrenDescendentHunks,
+      (childrenDescendentHunks) =>
+        childrenDescendentHunks.firstGenerationType ===
+        highestPriorityGenerationType,
+    );
+
+    const firstGeneration = uniqBy(
+      prioritizedDescendantHunks
+        .map((descendantHunks) => descendantHunks.firstGeneration)
+        .flat(),
+      (hunk) => hunk.node.id,
+    );
+    const extendedGenerations = uniqBy(
+      [
+        ...prioritizedDescendantHunks
+          .map((descendantHunks) => descendantHunks.extendedGenerations)
+          .flat(),
+        ...commonDescendantHunks
+          .map((descendantHunks) => [
+            ...descendantHunks.firstGeneration,
+            ...descendantHunks.extendedGenerations,
+          ])
+          .flat(),
+      ],
+      (hunk) => hunk.node.id,
+    );
+
+    this.descendantHunksCache = {
+      firstGeneration,
+      firstGenerationType: highestPriorityGenerationType,
+      extendedGenerations,
+    };
+    return this.descendantHunksCache;
+  };
 }

@@ -1,14 +1,21 @@
 import { EdgeType, isAggregator, isHunk, UsagePatternJson } from "@/types";
-import { BaseNode } from "@/services/content/graph/BaseNode.ts";
+import {
+  BaseNode,
+  DescendantHunks,
+  GenerationType,
+} from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import uniqueBy from "@popperjs/core/lib/utils/uniqueBy";
+import { useSubjectId } from "@/services/content/useSubjectId.ts";
+import { partition } from "lodash";
 
 export class UsagePattern extends BaseNode {
   declare node: UsagePatternJson;
   private usedNodesCache: (Hunk | UsagePattern)[] | null = null;
   private useHunksCache: Hunk[] | null = null;
+  private notSubjectDescendantHunksCache: DescendantHunks | null = null;
 
   constructor(node: UsagePatternJson) {
     super(node);
@@ -169,4 +176,35 @@ export class UsagePattern extends BaseNode {
   shouldGenerate(_nodesStore: NodesStore): boolean {
     return true;
   }
+
+  getDescendantHunks = (nodesStore: NodesStore) => {
+    const { firstGeneration, extendedGenerations } =
+      super.getUntypedDescendantHunks(nodesStore);
+
+    const subjectId = useSubjectId.getState().subjectId;
+    if (this.node.id === subjectId) {
+      return {
+        firstGeneration,
+        firstGenerationType: GenerationType.Usage,
+        extendedGenerations,
+      };
+    }
+
+    if (this.notSubjectDescendantHunksCache) {
+      return this.notSubjectDescendantHunksCache;
+    }
+
+    const useHunksId = this.getUseHunks(nodesStore).map((hunk) => hunk.node.id);
+    const [firstGenerationUseHunks, restFirstGeneration] = partition(
+      firstGeneration,
+      (hunk) => useHunksId.includes(hunk.node.id),
+    );
+
+    this.notSubjectDescendantHunksCache = {
+      firstGeneration: firstGenerationUseHunks,
+      firstGenerationType: GenerationType.Usage,
+      extendedGenerations: [...extendedGenerations, ...restFirstGeneration],
+    };
+    return this.notSubjectDescendantHunksCache;
+  };
 }

@@ -7,10 +7,9 @@ import { Steps } from "@/components/popup/Steps.tsx";
 // TODO: retry on service down
 // TODO: inject on unified/split
 // TODO: scroll in hunk mode
-// TODO: enrich some minimal hunks (simpleName, parameter declaration,...) with their type in the prompte
 
 // TODO: not talk about "reference" in code ids
-// TODO: layered navigation
+// TODO: go inside chapters
 // TODO: give tooltip for most of buttons
 // TODO: auto scroll on subject change
 

@@ -1,5 +1,9 @@
 import { SuccessivePatternJson } from "@/types";
-import { BaseNode } from "@/services/content/graph/BaseNode.ts";
+import {
+  BaseNode,
+  DescendantHunks,
+  GenerationType,
+} from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { last } from "lodash";
 import { LLMClient } from "@/services/content/llm/LLMClient.ts";
@@ -89,5 +93,15 @@ export class SuccessivePattern extends BaseNode {
 
   shouldGenerate(_nodesStore: NodesStore): boolean {
     return true;
+  }
+
+  getDescendantHunks(nodesStore: NodesStore): DescendantHunks {
+    const { firstGeneration, extendedGenerations } =
+      super.getUntypedDescendantHunks(nodesStore);
+    return {
+      firstGeneration,
+      firstGenerationType: GenerationType.Successive,
+      extendedGenerations,
+    };
   }
 }

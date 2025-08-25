@@ -3,7 +3,6 @@ import {
   EdgeType,
   Hierarchy,
   isAggregator,
-  isHunk,
   UnifiedNodeJson,
 } from "@/types";
 import { SingularPattern } from "@/services/content/graph/SingularPattern.ts";
@@ -11,27 +10,15 @@ import { UsagePattern } from "@/services/content/graph/UsagePattern.ts";
 import { SuccessivePattern } from "@/services/content/graph/SuccessivePattern.ts";
 import { TraversalComponent } from "@/services/content/graph/TraversalComponent.ts";
 import { BaseNode } from "@/services/content/graph/BaseNode.ts";
-import { AIDetail, Hunk } from "@/services/content/graph/Hunk.ts";
+import { Hunk } from "@/services/content/graph/Hunk.ts";
 import { StorageKey } from "@/services/StorageKey.ts";
-import {
-  Dictionary,
-  groupBy,
-  intersection,
-  keyBy,
-  last,
-  sum,
-  uniq,
-} from "lodash";
+import { Dictionary, groupBy, last, sum } from "lodash";
 import { SimilarityPattern } from "@/services/content/graph/SimilarityPattern.ts";
 
 export class NodesStore {
   private readonly url: string;
   private nodes: Record<string, BaseNode> = {};
   private nodesBranches: Record<string, number> = {};
-  private nodeDescendents: Record<
-    string,
-    { firstGeneration: Hunk[]; extendedGenerations: Hunk[] }
-  > = {};
   private readonly edges: EdgeJson[] = [];
   private readonly sourceEdges: Dictionary<EdgeJson[]> = {};
   private readonly targetEdges: Dictionary<EdgeJson[]> = {};
@@ -146,71 +133,4 @@ export class NodesStore {
 
     await storage.setItem(StorageKey.hierarchy(this.url), hierarchy);
   };
-
-  getDescendantHunks(subjectId: string) {
-    if (this.nodeDescendents[subjectId]) {
-      return this.nodeDescendents[subjectId];
-    }
-
-    const firstGeneration: Hunk[] = [];
-    const extendedGenerations: Hunk[] = [];
-
-    let hopNodeIds = [subjectId];
-    while (true) {
-      const hopChildrenNodes = this.getNodes().filter(
-        ({ node }) => intersection(hopNodeIds, node.aggregatorIds).length > 0,
-      );
-
-      if (hopChildrenNodes.length == 0) {
-        break;
-      }
-
-      const hopChildrenHunks = hopChildrenNodes.filter(
-        ({ node }) => node.nodeType === "BASE" || node.nodeType === "EXTENSION",
-      ) as Hunk[];
-      if (firstGeneration.length === 0) {
-        firstGeneration.push(...hopChildrenHunks);
-      } else {
-        extendedGenerations.push(...hopChildrenHunks);
-      }
-
-      hopNodeIds = hopChildrenNodes.map(({ node }) => node.id);
-    }
-
-    this.nodeDescendents[subjectId] = { firstGeneration, extendedGenerations };
-    return this.nodeDescendents[subjectId];
-  }
-
-  getPromptIdsDetail(subjectId: string) {
-    const subject = this.getNodeById(subjectId);
-
-    const descendantHunks: Hunk[] = [];
-    if (isHunk(subject.node)) {
-      const generations = subject.node.aggregatorIds.map((aggregatorId) =>
-        this.getDescendantHunks(aggregatorId),
-      );
-      for (const { firstGeneration, extendedGenerations } of generations) {
-        descendantHunks.push(...firstGeneration);
-        descendantHunks.push(...extendedGenerations);
-      }
-    } else {
-      const { firstGeneration, extendedGenerations } =
-        this.getDescendantHunks(subjectId);
-      descendantHunks.push(...firstGeneration);
-      descendantHunks.push(...extendedGenerations);
-    }
-
-    const details: AIDetail[] = [];
-    for (const hunk of uniq(descendantHunks)) {
-      const detail = hunk.getDetail(this);
-      details.push(detail);
-
-      const srcsDetail = hunk.getSrcsDetail(this);
-      if (srcsDetail) {
-        details.push(...srcsDetail);
-      }
-    }
-
-    return keyBy(details, "promptId");
-  }
 }

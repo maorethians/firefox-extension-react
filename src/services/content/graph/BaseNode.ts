@@ -10,13 +10,32 @@ import {
 } from "@/services/content/useGenerationProcess.ts";
 import { useDescription } from "@/services/content/useDescription.ts";
 import { useTitle } from "@/services/content/useTitle.ts";
-import { keyBy } from "lodash";
+import { intersection, keyBy } from "lodash";
 import { z } from "zod";
+import { AIDetail, Hunk } from "@/services/content/graph/Hunk.ts";
+
+export enum GenerationType {
+  Usage = 1,
+  Successive = 2,
+  Similarity = 3,
+  Singular = 4,
+  Hunk = 5,
+}
+
+export type DescendantHunks = {
+  firstGeneration: Hunk[];
+  firstGenerationType: GenerationType;
+  extendedGenerations: Hunk[];
+};
 
 export abstract class BaseNode {
   node: UnifiedNodeJson;
   nodeType: NodeType;
   private dependencyGraphNodesIdCache: string[] | null = null;
+  protected unTypedDescendantHunksCache: Omit<
+    DescendantHunks,
+    "firstGenerationType"
+  > | null = null;
 
   protected constructor(node: UnifiedNodeJson) {
     this.node = node;
@@ -243,5 +262,67 @@ export abstract class BaseNode {
 
   shouldGenerate(_nodesStore: NodesStore): boolean {
     return false;
+  }
+
+  getUntypedDescendantHunks(
+    nodesStore: NodesStore,
+  ): Omit<DescendantHunks, "firstGenerationType"> {
+    if (this.unTypedDescendantHunksCache) {
+      return this.unTypedDescendantHunksCache;
+    }
+
+    const firstGeneration: Hunk[] = [];
+    const extendedGenerations: Hunk[] = [];
+
+    let hopNodeIds = [this.node.id];
+    while (true) {
+      const hopChildrenNodes = nodesStore
+        .getNodes()
+        .filter(
+          ({ node }) => intersection(hopNodeIds, node.aggregatorIds).length > 0,
+        );
+
+      if (hopChildrenNodes.length == 0) {
+        break;
+      }
+
+      const hopChildrenHunks = hopChildrenNodes.filter(
+        ({ node }) => node.nodeType === "BASE" || node.nodeType === "EXTENSION",
+      ) as Hunk[];
+      if (firstGeneration.length === 0) {
+        firstGeneration.push(...hopChildrenHunks);
+      } else {
+        extendedGenerations.push(...hopChildrenHunks);
+      }
+
+      hopNodeIds = hopChildrenNodes.map(({ node }) => node.id);
+    }
+
+    this.unTypedDescendantHunksCache = {
+      firstGeneration,
+      extendedGenerations,
+    };
+    return this.unTypedDescendantHunksCache;
+  }
+
+  abstract getDescendantHunks(nodesStore: NodesStore): DescendantHunks;
+
+  getPromptIdsDetail(nodesStore: NodesStore) {
+    const { firstGeneration, extendedGenerations } =
+      this.getDescendantHunks(nodesStore);
+    const descendantHunks = [...firstGeneration, ...extendedGenerations];
+
+    const details: AIDetail[] = [];
+    for (const hunk of descendantHunks) {
+      const detail = hunk.getDetail(nodesStore);
+      details.push(detail);
+
+      const srcsDetail = hunk.getSrcsDetail(nodesStore);
+      if (srcsDetail) {
+        details.push(...srcsDetail);
+      }
+    }
+
+    return keyBy(details, "promptId");
   }
 }
