@@ -24,7 +24,7 @@ import { useNodesStore } from "@/services/content/useNodesStore.ts";
 import { useRangeHandler } from "@/services/content/useRangeHandler.ts";
 import { isArray } from "lodash";
 
-const codeIdRegex = /code_[A-Z0-9]+/;
+const codeIdRegex = /code_[A-Z0-9]+/g;
 
 export const Generation: React.FC<{
   url: string;
@@ -227,11 +227,10 @@ export const Generation: React.FC<{
                     return <span>No Children</span>;
                   }
 
-                  if (!isArray(children)) {
-                    return <p>{children}</p>;
-                  }
-
-                  const resultChildren = children
+                  const validChildren = isArray(children)
+                    ? children
+                    : [children];
+                  const resultChildren = validChildren
                     .map((child) => {
                       if (typeof child !== "string") {
                         return child;
