@@ -1,4 +1,4 @@
-import { last, partition } from "lodash";
+import { compact, last, partition } from "lodash";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { isAggregator } from "@/types";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
@@ -10,7 +10,7 @@ export class Narrator {
   private nodesStore: NodesStore;
 
   private baseStory: Chapter[] = [];
-  private readonly availableStories: Chapter[][];
+  readonly availableStories: Chapter[][];
 
   activeStory: Chapter[];
 
@@ -31,13 +31,13 @@ export class Narrator {
       similarStory,
       commonNodesStory,
     } = new Chapterize(this.nodesStore).getPrunedStories(this.baseStory);
-    this.availableStories = [
+    this.availableStories = compact([
       commonNodesStory,
       similarStory,
       commonHunksStory,
       requirementsStory,
       this.baseStory,
-    ];
+    ]);
 
     this.activeStory = this.baseStory;
   }

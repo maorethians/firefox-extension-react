@@ -262,7 +262,7 @@ export const ControlPanel: React.FC<{
               valueLabelDisplay="off"
               marks
               min={0}
-              max={4}
+              max={narrator.availableStories.length - 1}
               step={1}
               value={storyGranularity}
               onChange={(_event: Event, newValue) => {

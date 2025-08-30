@@ -155,6 +155,10 @@ export class Chapterize {
     story: Chapter[],
     rootsSubNodeIds: Record<string, string[]>,
   ) => {
+    if (Object.keys(rootsSubNodeIds).length === 0) {
+      return;
+    }
+
     const storyDeepClone = story.map(
       ({ nodeId, represents, subStory }): Chapter => ({
         nodeId,
@@ -163,16 +167,9 @@ export class Chapterize {
       }),
     );
 
-    let validRootsSubNodeIds = rootsSubNodeIds;
-    if (Object.keys(rootsSubNodeIds).length === 0) {
-      validRootsSubNodeIds = this.getPruneRootsSubNodeIds(storyDeepClone, [
-        storyDeepClone[storyDeepClone.length - 1],
-      ]);
-    }
-
     const allSubNodeIds: string[] = [];
 
-    for (const [rootId, subNodeIds] of Object.entries(validRootsSubNodeIds)) {
+    for (const [rootId, subNodeIds] of Object.entries(rootsSubNodeIds)) {
       const chapter = storyDeepClone.find(({ nodeId }) => nodeId === rootId);
       if (!chapter) {
         continue;
