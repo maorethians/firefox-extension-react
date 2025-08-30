@@ -8,6 +8,10 @@ import Navigation from "../../public/navigation.svg?react";
 import Description from "../../public/description.svg?react";
 // @ts-ignore
 import Cross from "../../public/cross.svg?react";
+// @ts-ignore
+import GetOut from "../../public/getOut.svg?react";
+// @ts-ignore
+import GetIn from "../../public/getIn.svg?react";
 import { useColorMode } from "@/services/content/useColorMode.ts";
 import { colors } from "@/public/colors.ts";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
@@ -15,6 +19,9 @@ import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
 import { useTitle } from "@/services/content/useTitle.ts";
 import { useNodesStore } from "@/services/content/useNodesStore.ts";
 import { HunkJson, isHunk } from "@/types";
+import { useNarrator } from "@/services/content/useNarrator.ts";
+import { Chapter } from "@/services/content/Chapterize.ts";
+import { useSubjectChapter } from "@/services/content/useSubjectChapter.ts";
 
 export const SubjectNode: React.FC<{
   url: string;
@@ -24,10 +31,24 @@ export const SubjectNode: React.FC<{
   const highlightColor = colors[colorMode].HIGHLIGHT;
 
   const subjectId = useSubjectId((state) => state.subjectId);
+  const setSubjectId = useSubjectId((state) => state.setSubjectId);
   const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
   const setSubjectHunkId = useSubjectHunkId((state) => state.setHunkId);
 
   const id = subjectHunkId ?? subjectId;
+
+  const narrator = useNarrator((state) => state.narrator);
+  const [currentChapter, setCurrentChapter] = useState<Chapter | null>(null);
+  useEffect(() => {
+    if (!narrator) {
+      return;
+    }
+
+    setCurrentChapter(narrator.currentChapter());
+  }, [subjectId]);
+
+  const subjectChapter = useSubjectChapter((state) => state.chapter);
+  const setSubjectChapter = useSubjectChapter((state) => state.setChapter);
 
   const nodesStore = useNodesStore((state) => state.nodesStore);
   if (!nodesStore) {
@@ -135,6 +156,43 @@ export const SubjectNode: React.FC<{
         {/*    }}*/}
         {/*  />*/}
         {/*</IconButton>*/}
+        {(subjectChapter !== null ||
+          (currentChapter && currentChapter.subStory.length > 0)) && (
+          <IconButton
+            style={{ height: "35px" }}
+            onClick={() => {
+              if (subjectChapter !== null) {
+                setSubjectId(subjectChapter.nodeId);
+              }
+              setSubjectChapter(
+                subjectChapter === null ? currentChapter : null,
+              );
+            }}
+            sx={{
+              m: "1px",
+              p: "1px",
+            }}
+          >
+            {subjectChapter === null ? (
+              <GetIn
+                style={{
+                  color,
+                  width: "100%",
+                  height: "100%",
+                }}
+              />
+            ) : (
+              <GetOut
+                style={{
+                  color,
+                  width: "100%",
+                  height: "100%",
+                }}
+              />
+            )}
+          </IconButton>
+        )}
+
         {subjectHunkId && (
           <IconButton
             style={{ height: "35px" }}

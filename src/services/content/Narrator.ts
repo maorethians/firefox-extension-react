@@ -3,22 +3,14 @@ import { NodesStore } from "@/services/content/NodesStore.ts";
 import { isAggregator } from "@/types";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
 import { Chapter, Chapterize } from "@/services/content/Chapterize.ts";
-
-export type StoryType =
-  | "context"
-  | "similar"
-  | "common"
-  | "requirements"
-  | "base";
+import { useStoryGranularity } from "@/services/content/useStoryGranularity.ts";
+import { useSubjectChapter } from "@/services/content/useSubjectChapter.ts";
 
 export class Narrator {
   private nodesStore: NodesStore;
 
   private baseStory: Chapter[] = [];
-  private readonly requirementsStory: Chapter[];
-  private readonly commonStory: Chapter[];
-  private readonly similarStory: Chapter[];
-  private readonly contextStory: Chapter[];
+  private readonly availableStories: Chapter[][];
 
   activeStory: Chapter[];
 
@@ -33,12 +25,19 @@ export class Narrator {
     const stack = [rootNode.node.id];
     this.dfs(stack);
 
-    const { requirementsStory, commonStory, similarStory, contextStory } =
-      new Chapterize(this.nodesStore).getPrunedStories(this.baseStory);
-    this.requirementsStory = requirementsStory;
-    this.commonStory = commonStory;
-    this.similarStory = similarStory;
-    this.contextStory = contextStory;
+    const {
+      requirementsStory,
+      commonHunksStory,
+      similarStory,
+      commonNodesStory,
+    } = new Chapterize(this.nodesStore).getPrunedStories(this.baseStory);
+    this.availableStories = [
+      commonNodesStory,
+      similarStory,
+      commonHunksStory,
+      requirementsStory,
+      this.baseStory,
+    ];
 
     this.activeStory = this.baseStory;
   }
@@ -104,23 +103,15 @@ export class Narrator {
     stack.pop();
   };
 
-  setActiveStory(storyType: StoryType) {
-    switch (storyType) {
-      case "context":
-        this.activeStory = this.contextStory;
-        break;
-      case "similar":
-        this.activeStory = this.similarStory;
-        break;
-      case "common":
-        this.activeStory = this.commonStory;
-        break;
-      case "requirements":
-        this.activeStory = this.requirementsStory;
-        break;
-      case "base":
-        this.activeStory = this.baseStory;
+  updateActiveStory() {
+    const subjectChapter = useSubjectChapter.getState().chapter;
+    if (subjectChapter) {
+      this.activeStory = subjectChapter.subStory;
+      return;
     }
+
+    const storyGranularity = useStoryGranularity.getState().storyGranularity;
+    this.activeStory = this.availableStories[storyGranularity];
   }
 
   begin = () => {
@@ -157,5 +148,10 @@ export class Narrator {
       .getState()
       .setSubjectId(this.activeStory[availableIndex].nodeId);
     return availableIndex;
+  };
+
+  currentChapter = () => {
+    const currentIndex = this.currentIndex();
+    return this.activeStory[currentIndex];
   };
 }

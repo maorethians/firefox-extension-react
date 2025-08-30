@@ -1,9 +1,7 @@
 import React from "react";
 import { colors } from "@/public/colors.ts";
-import { Narrator, StoryType } from "@/services/content/Narrator.ts";
 import { CircularProgress, IconButton, Slider } from "@mui/material";
 import { OPEN_TAB_MESSAGE } from "@/entrypoints/background.ts";
-import { useNodesStore } from "@/services/content/useNodesStore.ts";
 import { useColorMode } from "@/services/content/useColorMode.ts";
 import {
   COLOR_MODE_STORAGE_KEY,
@@ -30,14 +28,9 @@ import { SubjectNode } from "@/components/content/SubjectNode.tsx";
 import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
 import { Evaluation } from "@/services/content/Evaluation.ts";
 import { useEvaluation } from "@/services/content/useEvaluation.ts";
-
-const options: [number, StoryType][] = [
-  [1, "context"],
-  [2, "similar"],
-  [3, "common"],
-  [4, "requirements"],
-  [5, "base"],
-];
+import { useStoryGranularity } from "@/services/content/useStoryGranularity.ts";
+import { useNarrator } from "@/services/content/useNarrator.ts";
+import { useSubjectChapter } from "@/services/content/useSubjectChapter.ts";
 
 export const ControlPanel: React.FC<{
   url: string;
@@ -47,35 +40,31 @@ export const ControlPanel: React.FC<{
   const [storyLength, setStoryLength] = useState(2);
   const [currentIndex, setCurrentIndex] = useState(1);
 
-  const [narrator, setNarrator] = React.useState<Narrator>();
-  const nodesStore = useNodesStore((state) => state.nodesStore);
-  useEffect(() => {
-    if (!nodesStore) {
-      return;
-    }
-
-    const narrator = new Narrator(nodesStore);
-    setNarrator(narrator);
-
-    setStoryLength(narrator.activeStory.length);
-    setCurrentIndex(narrator.currentIndex());
-  }, [nodesStore]);
-
-  const [storyGranularity, setStoryGranularity] = useState(5);
+  const narrator = useNarrator((state) => state.narrator);
   useEffect(() => {
     if (!narrator) {
       return;
     }
 
-    const label = options.find((option) => option[0] === storyGranularity)?.[1];
-    if (!label) {
+    setStoryLength(narrator.activeStory.length);
+    setCurrentIndex(narrator.currentIndex());
+  }, [narrator]);
+
+  const storyGranularity = useStoryGranularity(
+    (state) => state.storyGranularity,
+  );
+  const setGranularity = useStoryGranularity((state) => state.setGranularity);
+  const subjectChapter = useSubjectChapter((state) => state.chapter);
+  useEffect(() => {
+    if (!narrator) {
       return;
     }
 
-    narrator.setActiveStory(label);
+    narrator.updateActiveStory();
+
     setStoryLength(narrator.activeStory.length);
     setCurrentIndex(narrator.currentIndex());
-  }, [storyGranularity]);
+  }, [storyGranularity, subjectChapter]);
 
   const rangeHandler = useRangeHandler((state) => state.rangeHandler);
 
@@ -270,24 +259,14 @@ export const ControlPanel: React.FC<{
             }}
           >
             <Slider
-              valueLabelDisplay="auto"
-              valueLabelFormat={(value) => {
-                const label = options.find(
-                  (option) => option[0] === value,
-                )?.[1];
-                if (!label) {
-                  return value;
-                }
-
-                return label;
-              }}
+              valueLabelDisplay="off"
               marks
-              min={1}
-              max={5}
+              min={0}
+              max={4}
               step={1}
               value={storyGranularity}
               onChange={(_event: Event, newValue) => {
-                setStoryGranularity(newValue);
+                setGranularity(newValue);
               }}
               size={"small"}
               sx={{

@@ -1,4 +1,6 @@
 import { NodesStore } from "@/services/content/NodesStore.ts";
+import { uniq } from "lodash";
+import { isAggregator } from "@/types";
 
 export type Chapter = {
   nodeId: string;
@@ -15,16 +17,17 @@ export class Chapterize {
 
   private getRequirementRoots = (story: Chapter[]) =>
     story.filter((chapter) => {
-      const { node } = this.nodesStore.getNodeById(chapter.nodeId);
-
-      if (node.nodeType !== "USAGE") {
-        // Does it represent a requirement root?
+      if (chapter.represents) {
         return chapter.represents
-          ?.map((nodeId) => this.nodesStore.getNodeById(nodeId))
+          .map((nodeId) => this.nodesStore.getNodeById(nodeId))
           .some(({ node }) => node.nodeType === "USAGE");
       }
 
-      // Is it a requirement root?
+      const { node } = this.nodesStore.getNodeById(chapter.nodeId);
+      if (node.nodeType !== "USAGE") {
+        return false;
+      }
+
       const aggregators = node.aggregatorIds.map((aggregatorId) =>
         this.nodesStore.getNodeById(aggregatorId),
       );
@@ -33,81 +36,106 @@ export class Chapterize {
       );
     });
 
-  private getCommonNodesRoots = (story: Chapter[]) =>
+  private getCommonHunkRoots = (story: Chapter[]) =>
     story.filter((chapter) => {
-      const { node } = this.nodesStore.getNodeById(chapter.nodeId);
-
-      if (node.nodeType !== "COMPONENT") {
-        return false;
+      const candidateNodes = [this.nodesStore.getNodeById(chapter.nodeId)];
+      if (chapter.represents) {
+        candidateNodes.push(
+          ...chapter.represents.map((nodeId) =>
+            this.nodesStore.getNodeById(nodeId),
+          ),
+        );
       }
 
-      if (node.reasonType !== "COMMON") {
-        return false;
-      }
+      return candidateNodes.some(({ node }) => {
+        if (node.nodeType !== "COMPONENT") {
+          return false;
+        }
 
-      const reasonNodes = node.reasons.map((reason) =>
-        this.nodesStore.getNodeById(reason.id),
-      );
-      return !reasonNodes.some(
-        (node) =>
-          node.nodeType === "LOCATION_CONTEXT" ||
-          node.nodeType === "SEMANTIC_CONTEXT",
-      );
+        if (node.reasonType !== "COMMON") {
+          return false;
+        }
+
+        const reasonNodes = node.reasons.map((reason) =>
+          this.nodesStore.getNodeById(reason.id),
+        );
+        return !reasonNodes.some(
+          (node) =>
+            node.nodeType === "LOCATION_CONTEXT" ||
+            node.nodeType === "SEMANTIC_CONTEXT",
+        );
+      });
     });
 
   private getSimilarNodesRoots = (story: Chapter[]) =>
     story.filter((chapter) => {
-      const { node } = this.nodesStore.getNodeById(chapter.nodeId);
-
-      if (node.nodeType !== "COMPONENT") {
-        return false;
+      const candidateNodes = [this.nodesStore.getNodeById(chapter.nodeId)];
+      if (chapter.represents) {
+        candidateNodes.push(
+          ...chapter.represents.map((nodeId) =>
+            this.nodesStore.getNodeById(nodeId),
+          ),
+        );
       }
 
-      return node.reasonType === "SIMILAR";
+      return candidateNodes.some(({ node }) => {
+        if (node.nodeType !== "COMPONENT") {
+          return false;
+        }
+
+        return node.reasonType === "SIMILAR";
+      });
     });
 
-  private getCommonContextRoots = (story: Chapter[]) =>
+  private getCommonNodesRoots = (story: Chapter[]) =>
     story.filter((chapter) => {
-      const { node } = this.nodesStore.getNodeById(chapter.nodeId);
-
-      if (node.nodeType !== "COMPONENT") {
-        return false;
+      const candidateNodes = [this.nodesStore.getNodeById(chapter.nodeId)];
+      if (chapter.represents) {
+        candidateNodes.push(
+          ...chapter.represents.map((nodeId) =>
+            this.nodesStore.getNodeById(nodeId),
+          ),
+        );
       }
 
-      if (node.reasonType !== "COMMON") {
-        return false;
-      }
+      return candidateNodes.some(({ node }) => {
+        if (node.nodeType !== "COMPONENT") {
+          return false;
+        }
 
-      const reasonNodes = node.reasons.map((reason) =>
-        this.nodesStore.getNodeById(reason.id),
-      );
-      return reasonNodes.every(
-        (node) =>
-          node.nodeType === "LOCATION_CONTEXT" ||
-          node.nodeType === "SEMANTIC_CONTEXT",
-      );
+        return node.reasonType === "COMMON";
+      });
     });
 
   private getPruneRootsSubNodeIds(story: Chapter[], pruneRoots: Chapter[]) {
     const pruneRootSubNodeIds: Record<string, string[]> = {};
+    const allSubNodeIds: string[] = [];
 
     for (const { nodeId } of pruneRoots) {
       const subNodeIds: string[] = [];
 
       let hopNodeIds = [nodeId];
       while (true) {
-        const nextHopNodeIds = hopNodeIds
+        const hopExpansionEdges = hopNodeIds
           .map((nodeId) => this.nodesStore.getSourceEdges(nodeId))
           .flat()
-          .filter(({ type }) => type === "EXPANSION")
-          .map(({ targetId }) => targetId)
-          .filter((nodeId) => !subNodeIds.includes(nodeId));
-        if (nextHopNodeIds.length === 0) {
+          .filter(({ type }) => type === "EXPANSION");
+        const hopExpansionTargets = uniq(
+          hopExpansionEdges.map(({ targetId }) => targetId),
+        )
+          .filter((nodeId) => !subNodeIds.includes(nodeId))
+          .map((id) => this.nodesStore.getNodeById(id));
+        const hopAggregatorTargetIds = hopExpansionTargets
+          .filter(({ node }) => isAggregator(node))
+          .map(({ node }) => node.id);
+        if (hopAggregatorTargetIds.length === 0) {
           break;
         }
 
-        subNodeIds.push(...nextHopNodeIds);
-        hopNodeIds = nextHopNodeIds;
+        subNodeIds.push(...hopAggregatorTargetIds);
+        hopNodeIds = hopAggregatorTargetIds;
+
+        allSubNodeIds.push(...hopAggregatorTargetIds);
       }
 
       pruneRootSubNodeIds[nodeId] = story
@@ -116,36 +144,51 @@ export class Chapterize {
         .map((chapter) => chapter.nodeId);
     }
 
-    return pruneRootSubNodeIds;
+    return Object.fromEntries(
+      Object.entries(pruneRootSubNodeIds).filter(
+        ([rootId]) => !allSubNodeIds.includes(rootId),
+      ),
+    );
   }
 
   private pruneRoots = (
     story: Chapter[],
     rootsSubNodeIds: Record<string, string[]>,
   ) => {
+    const storyDeepClone = story.map(
+      ({ nodeId, represents, subStory }): Chapter => ({
+        nodeId,
+        represents,
+        subStory: [...subStory],
+      }),
+    );
+
     let validRootsSubNodeIds = rootsSubNodeIds;
     if (Object.keys(rootsSubNodeIds).length === 0) {
-      validRootsSubNodeIds = this.getPruneRootsSubNodeIds(story, [
-        story[story.length - 1],
+      validRootsSubNodeIds = this.getPruneRootsSubNodeIds(storyDeepClone, [
+        storyDeepClone[storyDeepClone.length - 1],
       ]);
     }
 
     const allSubNodeIds: string[] = [];
 
     for (const [rootId, subNodeIds] of Object.entries(validRootsSubNodeIds)) {
-      const chapter = story.find(({ nodeId }) => nodeId === rootId);
+      const chapter = storyDeepClone.find(({ nodeId }) => nodeId === rootId);
       if (!chapter) {
         continue;
       }
 
-      chapter.subStory = story.filter(({ nodeId }) =>
+      chapter.subStory = storyDeepClone.filter(({ nodeId }) =>
         subNodeIds.includes(nodeId),
       );
+      chapter.subStory.push(chapter);
 
       allSubNodeIds.push(...subNodeIds);
     }
 
-    return story.filter((chapter) => !allSubNodeIds.includes(chapter.nodeId));
+    return storyDeepClone.filter(
+      (chapter) => !allSubNodeIds.includes(chapter.nodeId),
+    );
   };
 
   getPrunedStories(story: Chapter[]) {
@@ -159,12 +202,12 @@ export class Chapterize {
       requirementRootsSubNodeIds,
     );
 
-    const commonNodesRoots = this.getCommonNodesRoots(story);
-    const commonNodesRootsSubNodeIds = this.getPruneRootsSubNodeIds(
+    const commonHunksRoots = this.getCommonHunkRoots(story);
+    const commonHunksRootsSubNodeIds = this.getPruneRootsSubNodeIds(
       story,
-      commonNodesRoots,
+      commonHunksRoots,
     );
-    const commonStory = this.pruneRoots(story, commonNodesRootsSubNodeIds);
+    const commonHunksStory = this.pruneRoots(story, commonHunksRootsSubNodeIds);
 
     const similarNodesRoots = this.getSimilarNodesRoots(story);
     const similarNodesRootsSubNodeIds = this.getPruneRootsSubNodeIds(
@@ -173,18 +216,18 @@ export class Chapterize {
     );
     const similarStory = this.pruneRoots(story, similarNodesRootsSubNodeIds);
 
-    const commonContextRoots = this.getCommonContextRoots(story);
-    const commonContextRootsSubNodeIds = this.getPruneRootsSubNodeIds(
+    const commonNodesRoots = this.getCommonNodesRoots(story);
+    const commonNodesRootsSubNodeIds = this.getPruneRootsSubNodeIds(
       story,
-      commonContextRoots,
+      commonNodesRoots,
     );
-    const contextStory = this.pruneRoots(story, commonContextRootsSubNodeIds);
+    const commonNodesStory = this.pruneRoots(story, commonNodesRootsSubNodeIds);
 
     return {
       requirementsStory,
-      commonStory,
+      commonHunksStory,
       similarStory,
-      contextStory,
+      commonNodesStory,
     };
   }
 }

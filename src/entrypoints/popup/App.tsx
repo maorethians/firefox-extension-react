@@ -12,6 +12,7 @@ import { Steps } from "@/components/popup/Steps.tsx";
 // TODO: go inside chapters
 // TODO: give tooltip for most of buttons
 // TODO: auto scroll on subject change
+// TODO: what if we cache but a new commit comes in afterwards?
 
 function App() {
   return (
