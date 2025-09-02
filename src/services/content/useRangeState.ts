@@ -10,6 +10,15 @@ export type RangeState =
   | "weakMove"
   | "base";
 
+const stateOverride: Record<RangeState, RangeState[]> = {
+  strongAddition: ["weakAddition", "strongMove", "weakMove"],
+  weakAddition: ["strongAddition", "strongMove", "weakMove"],
+  strongMove: ["strongAddition", "weakAddition", "weakMove"],
+  weakMove: ["strongAddition", "weakAddition", "strongMove"],
+  highlight: [],
+  base: [],
+};
+
 type RangeStateState = {
   rangeStates: Record<string, RangeState[]>;
   addRangeState: (rangeId: string, state: RangeState) => void;
@@ -29,9 +38,12 @@ export const useRangeState = create<RangeStateState>((set) => ({
         }
       }
 
+      const override = stateOverride[state];
       const currentRangeState = s.rangeStates[rangeId] ?? [];
       const newRangeState = [
-        ...currentRangeState.filter((st) => st !== state),
+        ...currentRangeState.filter(
+          (st) => st !== state && !override.includes(st),
+        ),
         state,
       ];
 

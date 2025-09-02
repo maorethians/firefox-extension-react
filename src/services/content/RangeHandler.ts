@@ -31,6 +31,8 @@ export class RangeHandler {
   private rangeSubject: Record<string, string> = {};
   private rangeGroup: Record<string, string[]> = {};
 
+  private rangeDetails: Record<string, { length: number }> = {};
+
   private subjectOrderedHunks: Record<string, Hunk[]> = {};
   private scrollIndex = 0;
 
@@ -206,8 +208,8 @@ export class RangeHandler {
       .getNodeById(useSubjectId.getState().subjectId)
       .getDescendantHunks(this.nodesStore);
 
-    this.addGenerationState(firstGeneration, "strong");
     this.addGenerationState(extendedGenerations, "weak");
+    this.addGenerationState(firstGeneration, "strong");
   }
 
   addGenerationState(generation: Hunk[], strength: "strong" | "weak") {
@@ -231,6 +233,17 @@ export class RangeHandler {
           addRangeState(
             RangeHandler.getRangeId(hunk.node.path, "dst", dst),
             `${strength}Move`,
+          );
+        }
+      }
+      if (hunk.node.dstExceptions) {
+        for (const exception of hunk.node.dstExceptions) {
+          console.log(
+            RangeHandler.getRangeId(hunk.node.path, "dst", exception),
+          );
+          addRangeState(
+            RangeHandler.getRangeId(hunk.node.path, "dst", exception),
+            `${strength}Addition`,
           );
         }
       }
@@ -580,6 +593,7 @@ export class RangeHandler {
       .getDescendantHunks(this.nodesStore);
     for (const hunk of [...firstGeneration, ...extendedGenerations]) {
       await this.prepareRangeLines(hunk.node.path, "dst", hunk.node);
+      this.prepareRangeDetail(hunk.node.path, "dst", hunk.node);
 
       const rangeId = RangeHandler.getRangeId(hunk.node.path, "dst", hunk.node);
       this.rangeParent[rangeId] = rangeId;
@@ -587,6 +601,7 @@ export class RangeHandler {
       if (hunk.node.srcs) {
         for (const src of hunk.node.srcs) {
           await this.prepareRangeLines(src.path, "src", src);
+          this.prepareRangeDetail(src.path, "src", src);
           this.rangeParent[RangeHandler.getRangeId(src.path, "src", src)] =
             rangeId;
         }
@@ -594,13 +609,30 @@ export class RangeHandler {
       if (hunk.node.dsts) {
         for (const dst of hunk.node.dsts) {
           await this.prepareRangeLines(hunk.node.path, "dst", dst);
+          this.prepareRangeDetail(hunk.node.path, "dst", dst);
           this.rangeParent[
             RangeHandler.getRangeId(hunk.node.path, "dst", dst)
           ] = rangeId;
         }
       }
+      if (hunk.node.dstExceptions) {
+        for (const exception of hunk.node.dstExceptions) {
+          await this.prepareRangeLines(hunk.node.path, "dst", exception);
+          this.prepareRangeDetail(hunk.node.path, "dst", exception);
+          this.rangeParent[
+            RangeHandler.getRangeId(hunk.node.path, "dst", exception)
+          ] = rangeId;
+        }
+      }
     }
   };
+
+  private prepareRangeDetail = (path: string, srcDst: SrcDst, range: Range) => {
+    const rangeId = RangeHandler.getRangeId(path, srcDst, range);
+    this.rangeDetails[rangeId] = { length: range.length };
+  };
+
+  getRangeDetail = (rangeId: string) => this.rangeDetails[rangeId];
 
   private prepareRangeLines = async (
     path: string,
@@ -670,6 +702,11 @@ export class RangeHandler {
       if (hunk.node.dsts) {
         for (const dst of hunk.node.dsts) {
           this.populateRangeSpans(spans, hunk.node.path, "dst", dst);
+        }
+      }
+      if (hunk.node.dstExceptions) {
+        for (const exception of hunk.node.dstExceptions) {
+          this.populateRangeSpans(spans, hunk.node.path, "dst", exception);
         }
       }
     }

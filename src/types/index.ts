@@ -21,6 +21,7 @@ export type Range = {
   startLineOffset: number;
   endLine: number;
   endLineOffset: number;
+  length: number;
 };
 
 export type HunkJson = BaseNodeJson & {
@@ -39,6 +40,7 @@ export type HunkJson = BaseNodeJson & {
     }[];
   } & Range)[];
   dsts?: Range[];
+  dstExceptions?: Range[];
   nodeType: "BASE" | "LOCATION_CONTEXT" | "SEMANTIC_CONTEXT" | "EXTENSION";
   astType: string;
 } & Range;

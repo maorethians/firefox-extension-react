@@ -22,17 +22,20 @@ const weakenColor = (color: string, alpha: number) => {
 const getColor = (states: RangeState[], colorMode: ColorMode) => {
   if (states.includes("highlight")) {
     return colors[colorMode].HIGHLIGHT;
-  } else if (states.includes("strongMove")) {
-    return colors[colorMode].MOVED;
-  } else if (states.includes("weakMove")) {
-    return weakenColor(colors[colorMode].MOVED, 0.45);
-  } else if (states.includes("strongAddition")) {
-    return colors[colorMode].ADDITION;
-  } else if (states.includes("weakAddition")) {
-    return weakenColor(colors[colorMode].ADDITION, 0.45);
   }
 
-  return;
+  for (const state of states) {
+    switch (state) {
+      case "strongAddition":
+        return colors[colorMode].ADDITION;
+      case "weakAddition":
+        return weakenColor(colors[colorMode].ADDITION, 0.45);
+      case "strongMove":
+        return colors[colorMode].MOVED;
+      case "weakMove":
+        return weakenColor(colors[colorMode].MOVED, 0.45);
+    }
+  }
 };
 
 export const SpanWrapper: React.FC<{
@@ -40,20 +43,27 @@ export const SpanWrapper: React.FC<{
   nodesStore: NodesStore;
   element: HTMLElement;
 }> = ({ rangeIds, element }) => {
+  const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
+  const setSubjectHunkId = useSubjectHunkId((state) => state.setHunkId);
+
   const rangeHandler = useRangeHandler((state) => state.rangeHandler)!;
+
   const groupsRanges = uniq(
     rangeIds.map((rangeId) => rangeHandler.getRangeGroup(rangeId)).flat(),
   );
   const groupHunkId = rangeIds.map((rangeId) =>
     rangeHandler.getGroupParentSubject(rangeId),
   )[0];
-  const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
-  const setSubjectHunkId = useSubjectHunkId((state) => state.setHunkId);
 
-  const rangesStates = rangeIds.map((rangeId) =>
-    useRangeState((state) => state.rangeStates[rangeId]),
-  );
+  const rangesStates = rangeIds
+    .map((rangeId) => ({
+      id: rangeId,
+      ...rangeHandler.getRangeDetail(rangeId),
+    }))
+    .sort((r1, r2) => r1.length - r2.length)
+    .map((range) => useRangeState((state) => state.rangeStates[range.id]));
   const states = compact(rangesStates).flat();
+
   const colorMode = useColorMode((state) => state.colorMode);
   const color = getColor(states, colorMode);
 
