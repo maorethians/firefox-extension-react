@@ -14,6 +14,8 @@ import { Steps } from "@/components/popup/Steps.tsx";
 // TODO: auto scroll on subject change
 // TODO: what if we cache but a new commit comes in afterwards?
 
+// TODO: toward code narrator (CodeGI) -> what should we do with big hunks (classes/methods)?
+
 function App() {
   return (
     <div>

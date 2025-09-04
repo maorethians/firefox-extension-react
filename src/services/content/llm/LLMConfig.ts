@@ -19,11 +19,12 @@ export const LLMConfig: Record<
     verify: async (key) => {
       try {
         await new ChatGroq({
-          model: "llama3-8b-8192",
+          model: "llama-3.1-8b-instant",
           apiKey: key,
         }).invoke("Hi!");
         return true;
       } catch (e) {
+        console.log(e);
         return false;
       }
     },
