@@ -238,9 +238,6 @@ export class RangeHandler {
       }
       if (hunk.node.dstExceptions) {
         for (const exception of hunk.node.dstExceptions) {
-          console.log(
-            RangeHandler.getRangeId(hunk.node.path, "dst", exception),
-          );
           addRangeState(
             RangeHandler.getRangeId(hunk.node.path, "dst", exception),
             `${strength}Addition`,
@@ -445,7 +442,7 @@ export class RangeHandler {
   private getNextRow(currentRow: Element, direction: Direction) {
     return direction === "down"
       ? currentRow.nextElementSibling
-      : currentRow.nextElementSibling;
+      : currentRow.previousElementSibling;
   }
 
   private getSubjectOrderedHunks = () => {

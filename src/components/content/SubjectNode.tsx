@@ -64,12 +64,13 @@ export const SubjectNode: React.FC<{
     const { firstGeneration } = nodesStore
       .getNodeById(id)
       .getDescendantHunks(nodesStore);
+    if (firstGeneration.length === 0) {
+      return;
+    }
+
     shadowNode = firstGeneration[0].node;
     for (const { node: generationNode } of firstGeneration) {
-      if (
-        shadowNode.endLine - shadowNode.startLine <
-        generationNode.endLine - generationNode.startLine
-      ) {
+      if (shadowNode.length < generationNode.length) {
         shadowNode = generationNode;
       }
     }
