@@ -64,45 +64,40 @@ export abstract class BaseNode {
 
       return tool(
         ({ ids }) => {
-          const result: string[] = [];
+          const result = ids.map((id) => {
+            let prompt = "{ id: " + id + " }\n";
 
-          for (const id of ids) {
             if (!promptIdSurroundingsIndex[id]) {
-              continue;
+              prompt +=
+                "The surrounding of this code cannot be expanded further.";
+              return prompt;
             }
 
             const { surroundings, index } = promptIdSurroundingsIndex[id];
-
-            let subPrompt =
-              "{ id: " +
-              id +
-              ", expansionSteps: " +
-              (index + 1) +
-              "/" +
-              surroundings.length +
-              " }\n";
-
             if (index === surroundings.length) {
-              subPrompt += "Reached expansion limit for this code.";
-            } else {
-              subPrompt += surroundings[index];
-              promptIdSurroundingsIndex[id].index = index + 1;
+              prompt +=
+                "The surrounding of this code cannot be expanded further.";
+              return prompt;
             }
 
-            result.push(subPrompt);
-          }
+            promptIdSurroundingsIndex[id].index = index + 1;
+
+            prompt += surroundings[index];
+            return prompt;
+          });
 
           console.log(result);
 
           return result.join("\n---\n");
         },
         {
-          name: "getSurrounding",
+          name: "fetchCodeSurroundings",
           description:
-            "Returns the code together with its surrounding to support better understanding. Each time the tool is" +
-            " called, it expands the surrounding boundaries, providing progressively broader visibility into the" +
-            " code location. The number of expansion steps is limited for each code and the tool is unable to expand" +
-            " boundaries further when you reach that limit.",
+            "Returns code snippets together with their surroundings. Each time this tool is called with the same code" +
+            " id, the surrounding boundaries expand further.\n\n# Guidelines:\n\`\`\`\n- You MUST call this tool" +
+            " whenever the provided code snippet is not self-contained, and its purpose can only be determined from" +
+            " its surroundings.\n- Keep expanding the surroundings until the role of the code snippet can be clearly" +
+            " explained, or until the expansion limit is reached.\n\`\`\`",
           schema: z.object({
             ids: z.array(z.string()),
           }),
