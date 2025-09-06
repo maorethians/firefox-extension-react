@@ -96,8 +96,8 @@ export abstract class BaseNode {
             "Returns code snippets together with their surroundings. Each time this tool is called with the same code" +
             " id, the surrounding boundaries expand further.\n\n# Guidelines:\n\`\`\`\n- You MUST call this tool" +
             " whenever the provided code snippet is not self-contained, and its purpose can only be determined from" +
-            " its surroundings.\n- Keep expanding the surroundings until the role of the code snippet can be clearly" +
-            " explained, or until the expansion limit is reached.\n\`\`\`",
+            " its surroundings.\n- You MUST continue calling this tool to expand the surrounding boundaries until" +
+            " the role of the code snippet can be clearly explained.\n\`\`\`",
           schema: z.object({
             ids: z.array(z.string()),
           }),
