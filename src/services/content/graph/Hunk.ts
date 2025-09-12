@@ -1,9 +1,10 @@
 import { HunkJson } from "@/types";
 import { BaseNode, GenerationType } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import { compact, keyBy, partition } from "lodash";
 import { customAlphabet } from "nanoid";
+import { tools } from "@/services/content/llm/tools.ts";
+import { NodeDescriptorAgent } from "@/services/content/llm/NodeDescriptorAgent.ts";
 
 export type SrcDst = "src" | "dst";
 
@@ -18,6 +19,7 @@ export type AIDetail = {
   startLineOffset: number;
   endLine: number;
   endLineOffset: number;
+  length: number;
   srcDst: SrcDst;
 };
 
@@ -59,6 +61,7 @@ export class Hunk extends BaseNode {
       startLineOffset: this.node.startLineOffset,
       endLine: this.node.endLine,
       endLineOffset: this.node.endLineOffset,
+      length: this.node.length,
       srcDst: "dst",
     };
 
@@ -101,6 +104,7 @@ export class Hunk extends BaseNode {
         startLineOffset: src.startLineOffset,
         endLine: src.endLine,
         endLineOffset: src.endLineOffset,
+        length: src.length,
         srcDst: "src",
       });
     }
@@ -268,8 +272,12 @@ export class Hunk extends BaseNode {
       nodesStore,
     );
     const surroundings = this.getSurroundings(nodesStore);
-    const tool = this.tools.description(surroundings);
-    const response = await LLMClient.invoke(prompt, tool);
+    const fetchSurroundingsTool = tools.fetchCodeSurroundings(surroundings);
+    const agent = new NodeDescriptorAgent(
+      fetchSurroundingsTool ? [fetchSurroundingsTool] : [],
+    );
+    await agent.init();
+    const response = await agent.invoke(prompt);
     await this.streamField("description", response, options?.parentsToSet);
 
     await this.entitle();

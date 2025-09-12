@@ -1,9 +1,5 @@
 import { NodeType, UnifiedNodeJson } from "@/types";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { LLMClient } from "@/services/content/llm/LLMClient.ts";
-import { AIMessageChunk } from "@langchain/core/messages";
-import { ChainValues } from "@@/node_modules/@langchain/core/dist/utils/types";
-import { tool } from "@langchain/core/tools";
 import {
   ProcessState,
   useGenerationProcess,
@@ -11,8 +7,8 @@ import {
 import { useDescription } from "@/services/content/useDescription.ts";
 import { useTitle } from "@/services/content/useTitle.ts";
 import { intersection, keyBy } from "lodash";
-import { z } from "zod";
 import { AIDetail, Hunk } from "@/services/content/graph/Hunk.ts";
+import { NodeDescriptorAgent } from "@/services/content/llm/NodeDescriptorAgent.ts";
 
 export enum GenerationType {
   Usage = 1,
@@ -41,70 +37,6 @@ export abstract class BaseNode {
     this.node = node;
     this.nodeType = node.nodeType;
   }
-
-  tools = {
-    description: (
-      idSurroundings: { promptId: string; surroundings: string[] }[],
-    ) => {
-      const validIdSurroundings = idSurroundings.filter(
-        ({ surroundings }) => surroundings.length > 0,
-      );
-      if (validIdSurroundings.length === 0) {
-        return;
-      }
-
-      const promptIdSurroundingsIndex = keyBy(
-        validIdSurroundings.map(({ promptId, surroundings }) => ({
-          promptId,
-          surroundings,
-          index: 0,
-        })),
-        "promptId",
-      );
-
-      return tool(
-        ({ ids }) => {
-          const result = ids.map((id) => {
-            let prompt = "{ id: " + id + " }\n";
-
-            if (!promptIdSurroundingsIndex[id]) {
-              prompt +=
-                "The surrounding of this code cannot be expanded further.";
-              return prompt;
-            }
-
-            const { surroundings, index } = promptIdSurroundingsIndex[id];
-            if (index === surroundings.length) {
-              prompt +=
-                "The surrounding of this code cannot be expanded further.";
-              return prompt;
-            }
-
-            promptIdSurroundingsIndex[id].index = index + 1;
-
-            prompt += surroundings[index];
-            return prompt;
-          });
-
-          console.log(result);
-
-          return result.join("\n---\n");
-        },
-        {
-          name: "fetchCodeSurroundings",
-          description:
-            "Returns code snippets together with their surroundings. Each time this tool is called with the same code" +
-            " id, the surrounding boundaries expand further.\n\n# Guidelines:\n\`\`\`\n- You MUST call this tool" +
-            " whenever the provided code snippet is not self-contained, and its purpose can only be determined from" +
-            " its surroundings.\n- You MUST continue calling this tool to expand the surrounding boundaries until" +
-            " the role of the code snippet can be clearly explained.\n\`\`\`",
-          schema: z.object({
-            ids: z.array(z.string()),
-          }),
-        },
-      );
-    },
-  };
 
   promptTemplates: Record<string, (...args: any[]) => string> = {};
 
@@ -193,10 +125,11 @@ export abstract class BaseNode {
       return;
     }
 
-    const response = await LLMClient.invoke(
+    const agent = new NodeDescriptorAgent();
+    await agent.init();
+    const response = await agent.invoke(
       this._basePromptTemplates.title(description),
     );
-
     await this.streamField("title", response);
   }
 
@@ -211,7 +144,7 @@ export abstract class BaseNode {
 
   async streamField(
     fieldKey: "description" | "title",
-    response?: AIMessageChunk | ChainValues,
+    response: Awaited<ReturnType<NodeDescriptorAgent["invoke"]>>,
     parentsToSet?: string[],
   ) {
     if (!response) {
@@ -242,17 +175,8 @@ export abstract class BaseNode {
 
     setter?.("");
 
-    if (response.content || (response as ChainValues).output) {
-      let content = "";
-      if (response.content) {
-        content = response.content;
-      } else if ((response as ChainValues).output) {
-        content = (response as ChainValues).output;
-      }
-
-      this.node[fieldKey] = content;
-      setter?.(this.node[fieldKey]);
-    }
+    this.node[fieldKey] = response;
+    setter?.(this.node[fieldKey]);
   }
 
   shouldGenerate(_nodesStore: NodesStore): boolean {

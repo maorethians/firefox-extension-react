@@ -1,22 +1,33 @@
-import { StorageItemKey } from "@wxt-dev/storage";
 import { ChatGroq } from "@langchain/groq";
-import { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import { ChatOllama } from "@langchain/ollama";
 
-export type ModelProvider = "groq";
+export enum ModelProvider {
+  ollama = "ollama",
+  groq = "groq",
+}
 
-export const LLMConfig: Record<
-  ModelProvider,
-  {
-    link: string;
-    storageKey: StorageItemKey;
-    verify: (key: string) => Promise<boolean>;
-    client: (key: string) => BaseChatModel;
-  }
-> = {
-  groq: {
+export const LLMConfig = {
+  [ModelProvider.ollama]: {
+    link: "https://www.reddit.com/r/LocalLLaMA/comments/1iloip9/how_to_allow_all_origins_on_reverseproxied_ollama/",
+    verify: async () => {
+      try {
+        await new ChatOllama({
+          model: "qwen2.5-coder:7b",
+        }).invoke("Hi!");
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+    client: async () =>
+      new ChatOllama({
+        model: "qwen2.5-coder:7b",
+      }),
+    storageKey: null,
+  },
+  [ModelProvider.groq]: {
     link: "https://console.groq.com/keys",
-    storageKey: "local:changeNarrator:groq",
-    verify: async (key) => {
+    verify: async (key: string) => {
       try {
         await new ChatGroq({
           model: "llama-3.1-8b-instant",
@@ -24,14 +35,20 @@ export const LLMConfig: Record<
         }).invoke("Hi!");
         return true;
       } catch (e) {
-        console.log(e);
         return false;
       }
     },
-    client: (key) =>
-      new ChatGroq({
+    client: async () => {
+      const key = await storage.getItem("local:changeNarrator:groq");
+      if (typeof key !== "string") {
+        return null;
+      }
+
+      return new ChatGroq({
         model: "llama-3.3-70b-versatile",
         apiKey: key,
-      }),
+      });
+    },
+    storageKey: "local:changeNarrator:groq" as StorageItemKey,
   },
 };

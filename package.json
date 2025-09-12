@@ -20,6 +20,8 @@
     "@fontsource/roboto": "^5.2.6",
     "@langchain/core": "^0.3.68",
     "@langchain/groq": "^0.2.3",
+    "@langchain/langgraph": "^0.4.9",
+    "@langchain/ollama": "^0.2.4",
     "@mui/material": "^7.0.2",
     "axios": "^1.9.0",
     "bluebird": "^3.7.2",
@@ -34,6 +36,7 @@
     "reagraph": "^4.24.2",
     "remark-gfm": "^4.0.1",
     "uri-js": "^4.4.1",
+    "uuid": "^13.0.0",
     "zustand": "^5.0.5"
   },
   "devDependencies": {

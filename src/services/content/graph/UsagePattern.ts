@@ -6,10 +6,11 @@ import {
 } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
-import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import uniqueBy from "@popperjs/core/lib/utils/uniqueBy";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
 import { partition } from "lodash";
+import { tools } from "@/services/content/llm/tools.ts";
+import { NodeDescriptorAgent } from "@/services/content/llm/NodeDescriptorAgent.ts";
 
 export class UsagePattern extends BaseNode {
   declare node: UsagePatternJson;
@@ -124,10 +125,12 @@ export class UsagePattern extends BaseNode {
         ),
       )
     ).flat();
-    const response = await LLMClient.invoke(
-      prompt,
-      this.tools.description(surroundings),
+    const fetchSurroundingsTool = tools.fetchCodeSurroundings(surroundings);
+    const agent = new NodeDescriptorAgent(
+      fetchSurroundingsTool ? [fetchSurroundingsTool] : [],
     );
+    await agent.init();
+    const response = await agent.invoke(prompt);
     await this.streamField("description", response, options?.parentsToSet);
 
     await this.entitle();

@@ -1,8 +1,9 @@
 import { SimilarityPatternJson } from "@/types";
 import { BaseNode, GenerationType } from "@/services/content/graph/BaseNode.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
-import { LLMClient } from "@/services/content/llm/LLMClient.ts";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
+import { tools } from "@/services/content/llm/tools.ts";
+import { NodeDescriptorAgent } from "@/services/content/llm/NodeDescriptorAgent.ts";
 
 export class SimilarityPattern extends BaseNode {
   declare node: SimilarityPatternJson;
@@ -62,10 +63,12 @@ export class SimilarityPattern extends BaseNode {
         similarNodes.map((hunk) => hunk.getSurroundings(nodesStore)),
       )
     ).flat();
-    const response = await LLMClient.invoke(
-      prompt,
-      this.tools.description(surroundings),
+    const fetchSurroundingsTool = tools.fetchCodeSurroundings(surroundings);
+    const agent = new NodeDescriptorAgent(
+      fetchSurroundingsTool ? [fetchSurroundingsTool] : [],
     );
+    await agent.init();
+    const response = await agent.invoke(prompt);
     await this.streamField("description", response, options?.parentsToSet);
 
     await this.entitle();

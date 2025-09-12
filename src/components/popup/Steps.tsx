@@ -1,7 +1,7 @@
 import React from "react";
 import { Tab, Tabs } from "@mui/material";
 import { LaunchService } from "@/components/popup/Steps/LaunchService.tsx";
-import { LLMKey } from "@/components/popup/Steps/LLMKey.tsx";
+import { SetLLM } from "@/components/popup/Steps/SetLLM.tsx";
 import { Box } from "@mui/system";
 // @ts-ignore
 import Container from "../../public/container.svg?react";
@@ -11,7 +11,7 @@ import AiKey from "../../public/aiKey.svg?react";
 import Feedback from "../../public/feedback.svg?react";
 import { ExportEvaluation } from "@/components/popup/Steps/ExportEvaluation.tsx";
 
-const steps = [LaunchService, LLMKey, ExportEvaluation];
+const steps = [LaunchService, SetLLM, ExportEvaluation];
 
 export const Steps: React.FC = () => {
   const [step, setStep] = React.useState(0);
