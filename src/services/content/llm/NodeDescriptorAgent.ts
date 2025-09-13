@@ -7,7 +7,6 @@ import {
   ToolMessage,
 } from "@langchain/core/messages";
 import { LLMConfig, ModelProvider } from "@/services/content/llm/LLMConfig.ts";
-import { ToolNode } from "@langchain/langgraph/prebuilt";
 import {
   defaultModelProvider,
   getStoredModelProvider,
@@ -48,102 +47,137 @@ export class NodeDescriptorAgent {
         reducer: (_, next) => [...next],
       }),
     });
-    return new StateGraph(StateAnnotation)
-      .addNode("descriptor", async (state) => {
-        const modelWithTools =
-          this.tools.length > 0 ? model.bindTools(this.tools) : model;
-        const responseMessage = await modelWithTools?.invoke(state.messages);
+    return (
+      new StateGraph(StateAnnotation)
+        .addNode("descriptor", async (state) => {
+          const modelWithTools =
+            this.tools.length > 0 ? model.bindTools(this.tools) : model;
+          const responseMessage = await modelWithTools?.invoke(state.messages);
 
-        const nextMessages = [...state.messages, responseMessage];
-        return { messages: nextMessages };
-      })
-      .addEdge(START, "descriptor")
-      .addConditionalEdges("descriptor", async (state) => {
-        const lastMessage = state.messages[
-          state.messages.length - 1
-        ] as AIMessage;
+          console.log(state.messages, responseMessage);
+          const nextMessages = [...state.messages, responseMessage];
+          return { messages: nextMessages };
+        })
+        .addEdge(START, "descriptor")
+        .addConditionalEdges("descriptor", async (state) => {
+          const lastMessage = state.messages[
+            state.messages.length - 1
+          ] as AIMessage;
 
-        if (lastMessage.tool_calls?.length) {
-          return "tools";
-        }
-
-        return "contentAnalyzer";
-      })
-      .addNode("tools", new ToolNode(this.tools))
-      .addEdge("tools", "descriptor")
-      .addNode("contentAnalyzer", async (state) => {
-        const lastMessage = state.messages[
-          state.messages.length - 1
-        ] as AIMessage;
-        const { content } = lastMessage;
-        if (typeof content !== "string") {
-          return state;
-        }
-
-        const toolJSONs = Object.values(toolsContentJSONRegex)
-          .map((regex) => content.match(regex))
-          .filter((matches) => matches !== null)
-          .map((matches) => matches.map((match) => JSON.parse(match)))
-          .flat();
-        if (toolJSONs.length === 0) {
-          return state;
-        }
-
-        const toolResults: {
-          id: string;
-          name: string;
-          args: any;
-          result: any;
-        }[] = [];
-        for (const { name: toolName, arguments: args } of toolJSONs) {
-          if (!isToolName(toolName)) {
-            continue;
+          if (lastMessage.tool_calls?.length) {
+            return "tools";
           }
 
-          const tool = this.tools.find((tool) => tool.name === toolName);
-          if (!tool) {
-            continue;
+          return "contentAnalyzer";
+        })
+        // ToolNode is default to override instead of append
+        .addNode("tools", async (state) => {
+          const lastMessage = state.messages[
+            state.messages.length - 1
+          ] as AIMessage;
+
+          const toolResults: {
+            id: string;
+            name: string;
+            args: any;
+            result: any;
+          }[] = [];
+          for (const { id, name: toolName, args } of lastMessage.tool_calls!) {
+            const tool = this.tools.find((tool) => tool.name === toolName)!;
+            const toolResult = await tool.invoke(args);
+            toolResults.push({
+              id: id!,
+              name: toolName,
+              args,
+              result: toolResult,
+            });
           }
 
-          if (!toolsArgumentsVerifier[toolName](args)) {
-            continue;
+          const nextMessages = [...state.messages];
+          for (const { id, name, result } of toolResults) {
+            nextMessages.push(
+              new ToolMessage({ tool_call_id: id, name, content: result }),
+            );
+          }
+          console.log(nextMessages);
+          return { messages: nextMessages };
+        })
+        .addEdge("tools", "descriptor")
+        .addNode("contentAnalyzer", async (state) => {
+          const lastMessage = state.messages[
+            state.messages.length - 1
+          ] as AIMessage;
+          const { content } = lastMessage;
+          if (typeof content !== "string") {
+            return state;
           }
 
-          const toolResult = await tool.invoke(args);
-          toolResults.push({
-            id: uuidV4(),
-            name: toolName,
-            args,
-            result: toolResult,
-          });
-        }
-        if (toolResults.length === 0) {
-          return state;
-        }
+          const toolJSONs = Object.values(toolsContentJSONRegex)
+            .map((regex) => content.match(regex))
+            .filter((matches) => matches !== null)
+            .map((matches) => matches.map((match) => JSON.parse(match)))
+            .flat();
+          if (toolJSONs.length === 0) {
+            return state;
+          }
 
-        const nextMessages = [
-          ...state.messages.slice(0, -1),
-          new AIMessage({
-            content: "",
-            tool_calls: toolResults,
-          }),
-        ];
-        for (const { id, name, result } of toolResults) {
-          nextMessages.push(
-            new ToolMessage({ tool_call_id: id, name, content: result }),
-          );
-        }
-        return { messages: nextMessages };
-      })
-      .addConditionalEdges("contentAnalyzer", (state) => {
-        const lastMessage = state.messages[state.messages.length - 1];
-        if ((lastMessage as ToolMessage).tool_call_id) {
-          return "descriptor";
-        }
+          const toolResults: {
+            id: string;
+            name: string;
+            args: any;
+            result: any;
+          }[] = [];
+          for (const { name: toolName, arguments: args } of toolJSONs) {
+            if (!isToolName(toolName)) {
+              continue;
+            }
 
-        return END;
-      })
-      .compile();
+            const tool = this.tools.find((tool) => tool.name === toolName);
+            if (!tool) {
+              continue;
+            }
+
+            if (!toolsArgumentsVerifier[toolName](args)) {
+              continue;
+            }
+
+            const toolResult = await tool.invoke(args);
+            toolResults.push({
+              id: uuidV4(),
+              name: toolName,
+              args,
+              result: toolResult,
+            });
+          }
+          if (toolResults.length === 0) {
+            return state;
+          }
+
+          const nextMessages = [
+            ...state.messages.slice(0, -1),
+            new AIMessage({
+              content: "",
+              tool_calls: toolResults,
+            }),
+          ];
+          for (const { id, name, result } of toolResults) {
+            nextMessages.push(
+              new ToolMessage({ tool_call_id: id, name, content: result }),
+            );
+          }
+          console.log(nextMessages);
+          return { messages: nextMessages };
+        })
+        .addConditionalEdges("contentAnalyzer", (state) => {
+          const lastMessage = state.messages[state.messages.length - 1];
+          if ((lastMessage as ToolMessage).tool_call_id) {
+            return "descriptor";
+          }
+
+          return END;
+        })
+        .compile()
+    );
   };
 
   invoke = async (prompt: string) => {
