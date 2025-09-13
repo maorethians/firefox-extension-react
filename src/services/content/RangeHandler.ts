@@ -62,8 +62,8 @@ export class RangeHandler {
         if (!filePathSection) {
           continue;
         }
-        const filePathButton = filePathSection.querySelector("button");
-        const filePathWrapper = filePathButton?.nextElementSibling;
+        const filePathWrapper =
+          filePathSection.firstElementChild?.nextElementSibling;
         const filePathElement =
           filePathWrapper?.firstElementChild?.firstElementChild
             ?.firstElementChild;
@@ -88,6 +88,7 @@ export class RangeHandler {
           continue;
         }
 
+        console.log(filePath);
         this.fileDiffTable[filePath] = diffTable
           .querySelectorAll("tbody")
           .item(0);
