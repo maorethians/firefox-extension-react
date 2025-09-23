@@ -194,7 +194,7 @@ export class Hunk extends BaseNode {
       }
 
       prompt +=
-        `\n# Task:\n\`\`\`\nIdentify and explain the specific role or function of the Subject ${aggregatorsDescription.length !== 0 ? "within the Context" : ""}.\n\`\`\`\n\n# Guidelines:\n\`\`\`\n- Make explicit references to code elements, identifiers, and code ids in your explanation to ensure clarity and help connect the explanation to the provided content.\n` +
+        `\n# Task:\n\`\`\`\nIdentify and explain the specific role or function of the Subject${aggregatorsDescription.length !== 0 ? " within the Context" : ""}.\n\`\`\`\n\n# Guidelines:\n\`\`\`\n- Make explicit references to code elements, identifiers, and code ids in your explanation to ensure clarity and help connect the explanation to the provided content.\n` +
         (aggregatorsDescription.length !== 0
           ? `- Focus on how the Subject contributes to the surrounding logic, structure, or behavior described in the Context.\n- Avoid rephrasing or summarizing the full Context.\n`
           : "") +
