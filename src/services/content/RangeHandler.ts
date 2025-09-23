@@ -88,7 +88,6 @@ export class RangeHandler {
           continue;
         }
 
-        console.log(filePath);
         this.fileDiffTable[filePath] = diffTable
           .querySelectorAll("tbody")
           .item(0);
@@ -158,6 +157,66 @@ export class RangeHandler {
       return line.classList.contains("blob-code-inner")
         ? line
         : line.getElementsByClassName("blob-code-inner").item(0);
+    },
+  };
+  private clickExpandButton = {
+    commit: async (
+      expandRow: Element,
+      direction: Direction,
+      callback: () => Promise<void>,
+    ) => {
+      const buttonsContainer = expandRow.firstElementChild?.firstElementChild;
+      if (!buttonsContainer) {
+        return false;
+      }
+
+      const expansionButtons = buttonsContainer.getElementsByTagName("button");
+      switch (expansionButtons.length) {
+        case 0:
+          return false;
+        case 1:
+          expansionButtons.item(0)?.click();
+          break;
+        case 2:
+          direction === "down"
+            ? expansionButtons.item(0)?.click()
+            : expansionButtons.item(1)?.click();
+      }
+
+      await callback();
+      return true;
+    },
+    pullRequest: async (
+      expandRow: Element,
+      direction: Direction,
+      callback: () => Promise<void>,
+    ) => {
+      if (!expandRow.classList.contains("js-expandable-line")) {
+        return false;
+      }
+
+      const expansionContainer = expandRow
+        .getElementsByClassName("blob-num-expandable")
+        .item(0);
+      if (!expansionContainer) {
+        return false;
+      }
+
+      const expansionLinks = expansionContainer.getElementsByTagName("a");
+      switch (expansionLinks.length) {
+        case 0:
+          return false;
+        case 1:
+          expansionLinks.item(0)?.click();
+          break;
+        case 2:
+          direction === "down"
+            ? expansionLinks.item(0)?.click()
+            : expansionLinks.item(1)?.click();
+      }
+
+      await callback();
+      return true;
     },
   };
 
@@ -350,52 +409,39 @@ export class RangeHandler {
   private getLineNumber = (td: Element) =>
     td.getAttribute("data-line-number") ?? td.firstElementChild?.innerHTML;
 
-  private async expandRow(row: Element, direction: Direction) {
+  private async expandRow(row: Element, direction: Direction, path: string) {
     const nextRow = this.getNextRow(row, direction);
     if (!nextRow) {
-      return;
+      return false;
     }
 
-    // TODO: it only works for pull request
-    if (!nextRow.classList.contains("js-expandable-line")) {
-      return;
-    }
-
-    const expansionContainer = nextRow
-      .getElementsByClassName("blob-num-expandable")
-      .item(0);
-    if (!expansionContainer) {
-      return;
-    }
-
-    const expansionLinks = expansionContainer.getElementsByTagName("a");
-    switch (expansionLinks.length) {
-      case 0:
+    let expandButton:
+      | (typeof this.clickExpandButton)["commit" | "pullRequest"]
+      | null = null;
+    let populateTable:
+      | (typeof this.populateTableMap)["commit" | "pullRequest"]
+      | null = null;
+    switch (this.type) {
+      case "Commit":
+        expandButton = this.clickExpandButton.commit;
+        populateTable = this.populateTableMap.commit;
         break;
-      case 1:
-        expansionLinks.item(0)?.click();
+      case "PRCommit":
+      case "PullRequest":
+        expandButton = this.clickExpandButton.pullRequest;
+        populateTable = this.populateTableMap.pullRequest;
         break;
-      case 2:
-        direction === "down"
-          ? expansionLinks.item(0)?.click()
-          : expansionLinks.item(1)?.click();
     }
+    return expandButton
+      ? expandButton(nextRow, direction, async () => {
+          while (nextRow.isConnected) {
+            await BPromise.delay(100);
+          }
 
-    await this.waitForExpansion(row, direction);
-
-    // TODO: provide only new rows
-    this.standardizeRows();
-  }
-
-  private async waitForExpansion(row: Element, direction: Direction) {
-    while (true) {
-      const nextRow = this.getNextRow(row, direction);
-      const rowInfo = this.getRowInfo(nextRow);
-      if (rowInfo?.srcTd || rowInfo?.dstTd) {
-        break;
-      }
-      await BPromise.delay(100);
-    }
+          populateTable!();
+          this.standardizeRows(Array.from(this.fileDiffTable[path].children));
+        })
+      : false;
   }
 
   private getClosestRow(
@@ -408,7 +454,7 @@ export class RangeHandler {
 
     let closestRow: Element | null = null;
     let closenessType: ClosenessType | null = null;
-    let closestDistance = rows.length;
+    let closestDistance = Infinity;
     for (const row of rows) {
       const rowInfo = this.getRowInfo(row);
       if (!rowInfo) {
@@ -522,6 +568,7 @@ export class RangeHandler {
     if (rows) {
       this.removeDefaultBackground(rows);
       this.wrapRowsTexts(rows);
+      return;
     }
 
     const allRows = Object.values(this.fileDiffTable)
@@ -579,9 +626,20 @@ export class RangeHandler {
         innerTextWrapper.replaceChild(wrapper, currentChild);
 
         currentChild = wrapper;
+      } else {
+        this.clearSpan(currentChild as Element);
       }
 
       currentChild = currentChild.nextSibling;
+    }
+  }
+
+  private clearSpan(span: Element) {
+    span.classList.remove("x");
+    let currentChild = span.firstElementChild;
+    while (currentChild !== null) {
+      currentChild.classList.remove("x");
+      currentChild = currentChild.firstElementChild;
     }
   }
 
@@ -635,8 +693,10 @@ export class RangeHandler {
   private prepareRangeLines = async (
     path: string,
     srcDst: SrcDst,
-    { startLine, endLine }: Range,
-  ) => {
+    range: Range,
+  ): Promise<void> => {
+    const { startLine, endLine } = range;
+
     const { closestRow, closenessType } = this.getClosestRow(
       path,
       srcDst,
@@ -647,7 +707,7 @@ export class RangeHandler {
       return;
     }
 
-    let linesCount = 0;
+    const lines: Record<string, Element> = {};
     const rangeLength = endLine - startLine + 1;
     let currentRow = closestRow;
     while (true) {
@@ -662,17 +722,20 @@ export class RangeHandler {
       if (td && lineNumberStr) {
         const lineNumber = parseInt(lineNumberStr);
         if (startLine <= lineNumber && lineNumber <= endLine) {
-          this.lines[RangeHandler.getLineId(path, srcDst, lineNumber)] = td;
-          linesCount++;
+          lines[RangeHandler.getLineId(path, srcDst, lineNumber)] = td;
         }
       }
 
-      if (linesCount === rangeLength) {
+      if (Object.keys(lines).length === rangeLength) {
         break;
       }
 
       const direction = closenessType === "start" ? "down" : "up";
-      await this.expandRow(currentRow, direction);
+      const isExpanded = await this.expandRow(currentRow, direction, path);
+      if (isExpanded) {
+        await this.prepareRangeLines(path, srcDst, range);
+        return;
+      }
 
       const nextRow = this.getNextRow(currentRow, direction);
       if (!nextRow) {
@@ -681,6 +744,8 @@ export class RangeHandler {
 
       currentRow = nextRow;
     }
+
+    this.lines = { ...this.lines, ...lines };
   };
 
   private wrapInRangesSpans = () => {
