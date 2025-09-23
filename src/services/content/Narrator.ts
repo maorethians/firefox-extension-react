@@ -114,10 +114,6 @@ export class Narrator {
     this.activeStory = this.availableStories[storyGranularity];
   }
 
-  begin = () => {
-    this.goto(0);
-  };
-
   previous = () => {
     const currentIndex = this.currentIndex();
     const previousIndex = Math.max(0, currentIndex - 1);

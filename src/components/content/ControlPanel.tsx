@@ -119,23 +119,6 @@ export const ControlPanel: React.FC<{
             <IconButton
               disabled={currentIndex === 0 || !!subjectHunkId}
               style={{ height: "100%" }}
-              onClick={narrator.begin}
-              sx={{
-                m: "1px",
-                p: "1px",
-              }}
-            >
-              <GoToStart
-                style={{
-                  color,
-                  width: "100%",
-                  height: "100%",
-                }}
-              />
-            </IconButton>
-            <IconButton
-              disabled={currentIndex === 0 || !!subjectHunkId}
-              style={{ height: "100%" }}
               onClick={narrator.previous}
               sx={{
                 m: "1px",
