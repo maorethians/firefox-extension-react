@@ -126,7 +126,8 @@ export interface Cluster {
   edges: EdgeJson[];
 }
 
-export interface Hierarchy {
+export interface StorageData {
   nodes: UnifiedNodeJson[];
   edges: EdgeJson[];
+  messageStatements?: string[];
 }

@@ -1,10 +1,10 @@
 import ReactDOM from "react-dom/client";
 import React from "react";
 import { ClustersList } from "@/components/content/ClustersList.tsx";
-import { Cluster, Hierarchy } from "@/types";
+import { Cluster, StorageData } from "@/types";
 import { prepareStorage } from "@/services/prepareStorage.ts";
 
-const render = async (_hierarchy: Hierarchy, clusters: Cluster[]) => {
+const render = async (_storageData: StorageData, clusters: Cluster[]) => {
   const root = ReactDOM.createRoot(document.getElementById("clusterList")!);
   root.render(
     React.createElement(ClustersList, {

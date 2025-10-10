@@ -7,8 +7,8 @@ import {
   aggregatorNodeTypes,
   Cluster,
   EdgeJson,
-  Hierarchy,
   HunkJson,
+  StorageData,
   UnifiedNodeJson,
 } from "@/types";
 import { colors } from "@/public/colors.ts";
@@ -16,10 +16,10 @@ import { getNodeColor } from "@/services/content/getNodeColor.ts";
 
 export const CLUSTER_MESSAGE = "SetCluster";
 
-export const Graph: React.FC<{ hierarchy: Hierarchy; clusters: Cluster[] }> = ({
-  hierarchy,
-  clusters,
-}) => {
+export const Graph: React.FC<{
+  hierarchy: StorageData;
+  clusters: Cluster[];
+}> = ({ hierarchy, clusters }) => {
   const cyRef: RefObject<cytoscape.Core | null> = useRef(null);
 
   const [nodes, setNodes] = useState([] as UnifiedNodeJson[]);

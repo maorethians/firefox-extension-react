@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Cluster, Hierarchy } from "@/types";
+import { Cluster, StorageData } from "@/types";
 import { UrlHelper } from "@/services/UrlHelper.ts";
 
 export class ContainerClient {
@@ -21,7 +21,7 @@ export class ContainerClient {
   };
 
   static getHierarchy = async (url: string) => {
-    return this.get<Hierarchy>("hierarchy", url);
+    return this.get<StorageData>("hierarchy", url);
   };
 
   static getClusters = async (url: string) => {

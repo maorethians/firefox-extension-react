@@ -7,7 +7,7 @@ import {
   useEvaluation,
 } from "@/services/content/useEvaluation.ts";
 import { StorageKey } from "@/services/StorageKey.ts";
-import { EdgeType, Hierarchy, NodeType } from "@/types";
+import { EdgeType, NodeType, StorageData } from "@/types";
 import { Narrator } from "@/services/content/Narrator.ts";
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { Chapter } from "@/services/content/Chapterize.ts";
@@ -83,28 +83,23 @@ export class Evaluation {
 
     const result: ExportedEvaluation = {};
     for (const [url, urlEvaluation] of Object.entries(storageEvaluation)) {
-      const urlHierarchy = (await storage.getItem(
+      const storageData = (await storage.getItem(
         StorageKey.hierarchy(url),
-      )) as Hierarchy;
-      if (!urlHierarchy) {
+      )) as StorageData;
+      if (!storageData) {
         continue;
       }
 
-      const narrator = new Narrator(
-        new NodesStore(url, {
-          nodes: urlHierarchy.nodes,
-          edges: urlHierarchy.edges,
-        }),
-      );
+      const narrator = new Narrator(new NodesStore(url, storageData));
 
       result[url] = {
-        nodes: urlHierarchy.nodes.map((node) => ({
+        nodes: storageData.nodes.map((node) => ({
           id: node.id,
           description: node.description,
           title: node.title,
           type: node.nodeType,
         })),
-        edges: urlHierarchy.edges.map((edge) => ({
+        edges: storageData.edges.map((edge) => ({
           source: edge.sourceId,
           target: edge.targetId,
           type: edge.type,

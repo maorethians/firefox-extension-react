@@ -175,7 +175,7 @@ export abstract class BaseNode {
 
     setter?.("");
 
-    this.node[fieldKey] = response;
+    this.node[fieldKey] = response.response;
     setter?.(this.node[fieldKey]);
   }
 

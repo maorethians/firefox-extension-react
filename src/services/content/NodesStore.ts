@@ -1,8 +1,8 @@
 import {
   EdgeJson,
   EdgeType,
-  Hierarchy,
   isAggregator,
+  StorageData,
   UnifiedNodeJson,
 } from "@/types";
 import { SingularPattern } from "@/services/content/graph/SingularPattern.ts";
@@ -24,7 +24,9 @@ export class NodesStore {
   private readonly targetEdges: Dictionary<EdgeJson[]> = {};
   private readonly typeEdges: Dictionary<EdgeJson[]> = {};
 
-  constructor(url: string, { nodes, edges }: Hierarchy) {
+  private messageStatements: string[] | null = null;
+
+  constructor(url: string, { nodes, edges, messageStatements }: StorageData) {
     this.url = url;
     this.edges = edges;
 
@@ -33,6 +35,10 @@ export class NodesStore {
     this.typeEdges = groupBy(edges, "type");
 
     this.init(nodes);
+
+    if (messageStatements) {
+      this.messageStatements = messageStatements;
+    }
   }
 
   private init(nodes: UnifiedNodeJson[]) {
@@ -125,11 +131,22 @@ export class NodesStore {
     return this.nodes[id];
   }
 
+  getMessageStatements() {
+    return this.messageStatements ?? [];
+  }
+  setMessageStatements(messageStatements: string[]) {
+    this.messageStatements = messageStatements;
+  }
+
   updateStorage = async () => {
-    const hierarchy: Hierarchy = {
+    const hierarchy: StorageData = {
       nodes: this.getNodes().map((node) => node.stringify()),
       edges: this.edges,
     };
+
+    if (this.messageStatements) {
+      hierarchy.messageStatements = this.messageStatements;
+    }
 
     await storage.setItem(StorageKey.hierarchy(this.url), hierarchy);
   };

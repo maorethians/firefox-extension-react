@@ -1,10 +1,10 @@
-import { Cluster, Hierarchy } from "@/types";
+import { Cluster, StorageData } from "@/types";
 import { PREPARE_MESSAGE } from "@/entrypoints/background.ts";
 import { StorageKey } from "@/services/StorageKey.ts";
 
 export const prepareStorage = async (
   url: string,
-  onPrepare: (hierarchy: Hierarchy, clusters: Cluster[]) => Promise<void>,
+  onPrepare: (storageData: StorageData, clusters: Cluster[]) => Promise<void>,
 ) => {
   const [storageHierarchy, storageClusters] = await Promise.all([
     storage.getItem(StorageKey.hierarchy(url)),
@@ -12,7 +12,7 @@ export const prepareStorage = async (
   ]);
   if (storageHierarchy && storageClusters) {
     return onPrepare(
-      storageHierarchy as Hierarchy,
+      storageHierarchy as StorageData,
       storageClusters as Cluster[],
     );
   }

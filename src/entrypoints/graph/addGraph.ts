@@ -1,12 +1,12 @@
 import ReactDOM from "react-dom/client";
 import React from "react";
-import { Cluster, Hierarchy } from "@/types";
+import { Cluster, StorageData } from "@/types";
 import { Graph } from "@/components/content/Graph.tsx";
 import { prepareStorage } from "@/services/prepareStorage.ts";
 
-const render = async (hierarchy: Hierarchy, clusters: Cluster[]) => {
+const render = async (storageData: StorageData, clusters: Cluster[]) => {
   const root = ReactDOM.createRoot(document.getElementById("graph")!);
-  root.render(React.createElement(Graph, { hierarchy, clusters }));
+  root.render(React.createElement(Graph, { hierarchy: storageData, clusters }));
 };
 
 const addGraph = async () => {

@@ -1,6 +1,6 @@
 import React from "react";
 import { colors } from "@/public/colors.ts";
-import { CircularProgress, IconButton, Slider } from "@mui/material";
+import { CircularProgress, IconButton, Slider, Tab, Tabs } from "@mui/material";
 import { OPEN_TAB_MESSAGE } from "@/entrypoints/background.ts";
 import { useColorMode } from "@/services/content/useColorMode.ts";
 import {
@@ -13,7 +13,7 @@ import { useSubjectId } from "@/services/content/useSubjectId.ts";
 // @ts-ignore
 import Hierarchy from "../../public/hierarchy.svg?react";
 // @ts-ignore
-import GoToStart from "../../public/goToStart.svg?react";
+import Tools from "../../public/tools.svg?react";
 // @ts-ignore
 import Previous from "../../public/previous.svg?react";
 // @ts-ignore
@@ -24,18 +24,38 @@ import Scroll from "../../public/scroll.svg?react";
 import ThumbsUp from "../../public/thumbs-up.svg?react";
 // @ts-ignore
 import ThumbsDown from "../../public/thumbs-down.svg?react";
+// @ts-ignore
+import SearchIcon from "../../public/search.svg?react";
 import { SubjectNode } from "@/components/content/SubjectNode.tsx";
 import { useSubjectHunkId } from "@/services/content/useSubjectHunkId.ts";
 import { Evaluation } from "@/services/content/Evaluation.ts";
-import { useEvaluation } from "@/services/content/useEvaluation.ts";
+import { Eval, useEvaluation } from "@/services/content/useEvaluation.ts";
 import { useStoryGranularity } from "@/services/content/useStoryGranularity.ts";
 import { useNarrator } from "@/services/content/useNarrator.ts";
 import { useSubjectChapter } from "@/services/content/useSubjectChapter.ts";
+import {
+  Message,
+  MessageIcon,
+} from "@/components/content/Explorer/Message.tsx";
+import { Box } from "@mui/system";
+import { Search } from "@/components/content/Explorer/Search";
+
+const steps = [
+  { Component: Message, Icon: MessageIcon },
+  { Component: Search, Icon: SearchIcon },
+];
 
 export const ControlPanel: React.FC<{
   url: string;
 }> = ({ url }) => {
+  const [step, setStep] = React.useState(0);
+  const Component = steps[step].Component;
+
   const evaluation = new Evaluation(url);
+  const evalNode = (value: Eval) => evaluation.evalNode("story", value);
+  const storyEvaluation = useEvaluation((state) => state.evaluation["story"]);
+
+  const [isToolsSelected, selectTools] = useState(false);
 
   const [storyLength, setStoryLength] = useState(2);
   const [currentIndex, setCurrentIndex] = useState(1);
@@ -62,6 +82,7 @@ export const ControlPanel: React.FC<{
 
     narrator.updateActiveStory();
 
+    console.log(narrator);
     setStoryLength(narrator.activeStory.length);
     setCurrentIndex(narrator.currentIndex());
   }, [storyGranularity, subjectChapter]);
@@ -70,8 +91,6 @@ export const ControlPanel: React.FC<{
 
   const subjectHunkId = useSubjectHunkId((state) => state.hunkId);
   const subjectId = useSubjectId((state) => state.subjectId);
-
-  const storyEvaluation = useEvaluation((state) => state.evaluation["story"]);
 
   useEffect(() => {
     if (!narrator) {
@@ -104,18 +123,53 @@ export const ControlPanel: React.FC<{
           height: "45px",
         }}
       >
-        <ColorModeSwitch
-          checked={colorMode === "DARK"}
-          onChange={async () => {
-            const newColorMode = colorMode === "DARK" ? "LIGHT" : "DARK";
-
-            setColorMode(newColorMode);
-            await storage.setItem(COLOR_MODE_STORAGE_KEY, newColorMode);
-          }}
-        />
-
         {narrator && (
-          <div style={{ height: "100%" }}>
+          <div
+            style={{
+              height: "100%",
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+            }}
+          >
+            <ColorModeSwitch
+              checked={colorMode === "DARK"}
+              onChange={async () => {
+                const newColorMode = colorMode === "DARK" ? "LIGHT" : "DARK";
+
+                setColorMode(newColorMode);
+                await storage.setItem(COLOR_MODE_STORAGE_KEY, newColorMode);
+              }}
+            />
+            <IconButton
+              disabled={currentIndex === 0 || !!subjectHunkId}
+              style={{ height: "70%" }}
+              onClick={() => selectTools(!isToolsSelected)}
+              sx={{
+                m: "1px",
+                p: "1px",
+              }}
+            >
+              <Tools
+                style={{
+                  color,
+                  width: "100%",
+                  height: "100%",
+                }}
+              />
+            </IconButton>
+          </div>
+        )}
+
+        {narrator && !isToolsSelected && (
+          <div
+            style={{
+              height: "100%",
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+            }}
+          >
             <IconButton
               disabled={currentIndex === 0 || !!subjectHunkId}
               style={{ height: "100%" }}
@@ -167,10 +221,38 @@ export const ControlPanel: React.FC<{
                 }}
               />
             </IconButton>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "25px",
+                width: "100px",
+                paddingLeft: "8px",
+                paddingRight: "20px",
+              }}
+            >
+              <Slider
+                valueLabelDisplay="off"
+                marks
+                min={0}
+                max={narrator.availableStories.length - 1}
+                step={1}
+                value={storyGranularity}
+                onChange={(_event: Event, newValue) => {
+                  setGranularity(newValue);
+                }}
+                size={"small"}
+                sx={{
+                  m: 0,
+                  p: 0,
+                }}
+              />
+            </div>
             <IconButton
               disabled={!!subjectHunkId}
               style={{ height: "60%" }}
-              onClick={() => evaluation.evalNode("story", "positive")}
+              onClick={() => evalNode("positive")}
               sx={{
                 m: "1px",
                 p: "1px",
@@ -187,7 +269,7 @@ export const ControlPanel: React.FC<{
             <IconButton
               disabled={!!subjectHunkId}
               style={{ height: "60%" }}
-              onClick={() => evaluation.evalNode("story", "negative")}
+              onClick={() => evalNode("negative")}
               sx={{
                 m: "1px",
                 p: "1px",
@@ -227,70 +309,73 @@ export const ControlPanel: React.FC<{
       </div>
 
       {narrator && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            height: "25px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              width: "15%",
-            }}
-          >
-            <Slider
-              valueLabelDisplay="off"
-              marks
-              min={0}
-              max={narrator.availableStories.length - 1}
-              step={1}
-              value={storyGranularity}
-              onChange={(_event: Event, newValue) => {
-                setGranularity(newValue);
-              }}
-              size={"small"}
-              sx={{
-                m: 0,
-                p: 0,
-              }}
-            />
-          </div>
+        <div>
+          {!isToolsSelected && (
+            <div>
+              {!subjectHunkId && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "100%",
+                    paddingLeft: "20px",
+                    paddingRight: "20px",
+                    height: "25px",
+                  }}
+                >
+                  <Slider
+                    valueLabelDisplay="off"
+                    marks
+                    min={1}
+                    max={narrator?.activeStory.length}
+                    step={1}
+                    value={currentIndex + 1}
+                    onChange={(_event: Event, newValue) =>
+                      narrator?.goto(newValue - 1)
+                    }
+                    size={"small"}
+                    sx={{
+                      m: 0,
+                      p: 0,
+                    }}
+                  />
+                </div>
+              )}
+
+              <SubjectNode url={url} />
+            </div>
+          )}
+          {isToolsSelected && (
+            <div>
+              <Box sx={{ width: "100%" }}>
+                <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+                  <Tabs
+                    value={step}
+                    onChange={(_event, newStep: number) => {
+                      setStep(newStep);
+                    }}
+                    aria-label="basic tabs example"
+                  >
+                    {steps.map(({ Icon }) => (
+                      <Tab
+                        icon={<Icon style={{ height: "25px", color }} />}
+                        style={{ flex: 1 }}
+                      />
+                    ))}
+                  </Tabs>
+                </Box>
+              </Box>
+
+              {Component && (
+                <div style={{ marginTop: "15px" }}>
+                  <Component url={url} />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
-
-      {narrator && !subjectHunkId && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "100%",
-            paddingLeft: "20px",
-            paddingRight: "20px",
-            height: "25px",
-          }}
-        >
-          <Slider
-            valueLabelDisplay="off"
-            marks
-            min={1}
-            max={narrator?.activeStory.length}
-            step={1}
-            value={currentIndex + 1}
-            onChange={(_event: Event, newValue) => narrator?.goto(newValue - 1)}
-            size={"small"}
-            sx={{
-              m: 0,
-              p: 0,
-            }}
-          />
-        </div>
-      )}
-
-      {narrator && <SubjectNode url={url} />}
     </div>
   );
 };
