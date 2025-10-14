@@ -142,7 +142,6 @@ export const ControlPanel: React.FC<{
               }}
             />
             <IconButton
-              disabled={currentIndex === 0 || !!subjectHunkId}
               style={{ height: "70%" }}
               onClick={() => selectTools(!isToolsSelected)}
               sx={{

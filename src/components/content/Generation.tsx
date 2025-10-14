@@ -28,7 +28,7 @@ import { RangeHandler } from "@/services/content/RangeHandler.ts";
 
 const codeIdRegex = /code_[A-Z0-9]+/g;
 
-const replaceCodeIds = (
+export const replaceCodeIds = (
   text: string,
   promptIdsDetail: Dictionary<AIDetail>,
   rangeHandler: RangeHandler,

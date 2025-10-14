@@ -7,7 +7,8 @@ import {
 import { NodesStore } from "@/services/content/NodesStore.ts";
 import { useDescription } from "@/services/content/useDescription.ts";
 import { compact, partition, uniqBy } from "lodash";
-import { NodeDescriptorAgent } from "@/services/content/llm/NodeDescriptorAgent.ts";
+import { NodeDescriptorAgent } from "@/services/content/llm/agents/NodeDescriptorAgent";
+import { HumanMessage } from "@langchain/core/messages";
 
 export class TraversalComponent extends BaseNode {
   declare node: TraversalComponentJson | ClusterJson | RootJson;
@@ -102,7 +103,9 @@ export class TraversalComponent extends BaseNode {
     const prompt = this.promptTemplates.description(childrenDescription);
     const agent = new NodeDescriptorAgent();
     await agent.init();
-    const response = await agent.invoke(prompt);
+    const response = await agent.invoke({
+      messages: [new HumanMessage(prompt)],
+    });
     await this.streamField("description", response, options?.parentsToSet);
 
     await this.entitle();

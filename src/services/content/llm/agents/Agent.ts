@@ -3,12 +3,7 @@ import {
   CompiledStateGraph,
   StateType,
 } from "@langchain/langgraph/web";
-import {
-  AIMessage,
-  BaseMessage,
-  HumanMessage,
-  ToolMessage,
-} from "@langchain/core/messages";
+import { AIMessage, BaseMessage, ToolMessage } from "@langchain/core/messages";
 import { LLMConfig, ModelProvider } from "@/services/content/llm/LLMConfig.ts";
 import {
   defaultModelProvider,
@@ -38,11 +33,8 @@ export abstract class Agent<TState extends StateType<any>> {
     model: Awaited<ReturnType<(typeof LLMConfig)[ModelProvider]["client"]>>,
   ): CompiledStateGraph<any, any, any, any, TState> | null;
 
-  async invoke(prompt: string) {
-    console.log(prompt);
-    const response = await this.app?.invoke({
-      messages: [new HumanMessage(prompt)],
-    });
+  async invoke(input: Parameters<NonNullable<typeof this.app>["invoke"]>[0]) {
+    const response = await this.app?.invoke(input);
     if (!response) {
       throw new Error("Agent not initialized");
     }

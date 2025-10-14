@@ -4,7 +4,8 @@ import { NodesStore } from "@/services/content/NodesStore.ts";
 import { compact, keyBy, partition } from "lodash";
 import { customAlphabet } from "nanoid";
 import { tools } from "@/services/content/llm/tools.ts";
-import { NodeDescriptorAgent } from "@/services/content/llm/NodeDescriptorAgent.ts";
+import { NodeDescriptorAgent } from "@/services/content/llm/agents/NodeDescriptorAgent";
+import { HumanMessage } from "@langchain/core/messages";
 
 export type SrcDst = "src" | "dst";
 
@@ -165,7 +166,7 @@ export class Hunk extends BaseNode {
 
             return subPrompt;
           })
-          .join("\n---\n");
+          .join("\n");
         prompt += "\n\nMoved and Augmented to:\n\n";
       }
 
@@ -277,7 +278,9 @@ export class Hunk extends BaseNode {
       fetchSurroundingsTool ? [fetchSurroundingsTool] : [],
     );
     await agent.init();
-    const response = await agent.invoke(prompt);
+    const response = await agent.invoke({
+      messages: [new HumanMessage(prompt)],
+    });
     await this.streamField("description", response, options?.parentsToSet);
 
     await this.entitle();

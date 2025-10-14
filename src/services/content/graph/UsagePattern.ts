@@ -10,7 +10,8 @@ import uniqueBy from "@popperjs/core/lib/utils/uniqueBy";
 import { useSubjectId } from "@/services/content/useSubjectId.ts";
 import { partition } from "lodash";
 import { tools } from "@/services/content/llm/tools.ts";
-import { NodeDescriptorAgent } from "@/services/content/llm/NodeDescriptorAgent.ts";
+import { NodeDescriptorAgent } from "@/services/content/llm/agents/NodeDescriptorAgent";
+import { HumanMessage } from "@langchain/core/messages";
 
 export class UsagePattern extends BaseNode {
   declare node: UsagePatternJson;
@@ -130,7 +131,9 @@ export class UsagePattern extends BaseNode {
       fetchSurroundingsTool ? [fetchSurroundingsTool] : [],
     );
     await agent.init();
-    const response = await agent.invoke(prompt);
+    const response = await agent.invoke({
+      messages: [new HumanMessage(prompt)],
+    });
     await this.streamField("description", response, options?.parentsToSet);
 
     await this.entitle();

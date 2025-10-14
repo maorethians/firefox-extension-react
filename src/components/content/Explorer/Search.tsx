@@ -15,8 +15,12 @@ import MessageIcon from "../../../public/message.svg?react";
 import Generate from "../../../public/generate.svg?react";
 import { ProcessState } from "@/services/content/useGenerationProcess.ts";
 import { useSearchQuery } from "@/services/content/useSearchQuery.ts";
-import { SearchAgent } from "@/services/content/llm/SearchAgent";
+import { SearchAgent } from "@/services/content/llm/agents/SearchAgent";
 import ReactMarkdown from "react-markdown";
+import { useRangeHandler } from "@/services/content/useRangeHandler";
+import { replaceCodeIds } from "../Generation";
+import { Hunk } from "@/services/content/graph/Hunk";
+import { keyBy } from "lodash";
 
 export { MessageIcon };
 
@@ -37,9 +41,14 @@ export const Search: React.FC<{
   const [hunks, setHunks] = useState<string[]>([]);
 
   const nodesStore = useNodesStore((state) => state.nodesStore);
-  if (!nodesStore) {
+  const rangeHandler = useRangeHandler((state) => state.rangeHandler);
+  if (!nodesStore || !rangeHandler) {
     return;
   }
+
+  const hunksDetail = hunks.map((hunkId) =>
+    (nodesStore.getNodeById(hunkId) as Hunk).getDetail(nodesStore),
+  );
 
   const [searchProcess, setSearchProcess] = useState<ProcessState>("result");
 
@@ -95,8 +104,8 @@ export const Search: React.FC<{
 
             const searchAgent = new SearchAgent();
             await searchAgent.init();
-            const result = await searchAgent.invoke(searchQuery);
-            setHunks(result.response);
+            const response = await searchAgent.invoke({ query: searchQuery });
+            setHunks(Array.from(response.hunks));
 
             setSearchProcess("result");
           }}
@@ -151,7 +160,24 @@ export const Search: React.FC<{
           overflowY: "auto",
         }}
       >
-        <ReactMarkdown>{hunks.join("\n---\n")}</ReactMarkdown>
+        <ReactMarkdown
+          components={{
+            code: ({ children }) => {
+              if (typeof children !== "string") {
+                return <code>{children}</code>;
+              }
+
+              const resultChildren = replaceCodeIds(
+                children,
+                keyBy(hunksDetail, "promptId"),
+                rangeHandler,
+              );
+              return <code>{resultChildren}</code>;
+            },
+          }}
+        >
+          {"\`" + hunksDetail.map((h) => h.promptId).join(", ") + "\`"}
+        </ReactMarkdown>
       </div>
     </div>
   );

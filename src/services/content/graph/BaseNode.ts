@@ -8,7 +8,8 @@ import { useDescription } from "@/services/content/useDescription.ts";
 import { useTitle } from "@/services/content/useTitle.ts";
 import { intersection, keyBy } from "lodash";
 import { AIDetail, Hunk } from "@/services/content/graph/Hunk.ts";
-import { NodeDescriptorAgent } from "@/services/content/llm/NodeDescriptorAgent.ts";
+import { NodeDescriptorAgent } from "@/services/content/llm/agents/NodeDescriptorAgent";
+import { HumanMessage } from "@langchain/core/messages";
 
 export enum GenerationType {
   Usage = 1,
@@ -127,9 +128,11 @@ export abstract class BaseNode {
 
     const agent = new NodeDescriptorAgent();
     await agent.init();
-    const response = await agent.invoke(
-      this._basePromptTemplates.title(description),
-    );
+    const response = await agent.invoke({
+      messages: [
+        new HumanMessage(this._basePromptTemplates.title(description)),
+      ],
+    });
     await this.streamField("title", response);
   }
 
@@ -144,13 +147,9 @@ export abstract class BaseNode {
 
   async streamField(
     fieldKey: "description" | "title",
-    response: Awaited<ReturnType<NodeDescriptorAgent["invoke"]>>,
+    res: Awaited<ReturnType<NodeDescriptorAgent["invoke"]>>,
     parentsToSet?: string[],
   ) {
-    if (!response) {
-      return;
-    }
-
     let setter;
     if (fieldKey === "description") {
       this.node.description = "";
@@ -175,7 +174,7 @@ export abstract class BaseNode {
 
     setter?.("");
 
-    this.node[fieldKey] = response.response;
+    this.node[fieldKey] = res.response;
     setter?.(this.node[fieldKey]);
   }
 

@@ -14,9 +14,10 @@ import MessageIcon from "../../../public/message.svg?react";
 // @ts-ignore
 import Generate from "../../../public/generate.svg?react";
 import { ProcessState } from "@/services/content/useGenerationProcess.ts";
-import { MessageStatementsAgent } from "@/services/content/llm/MessageStatementsAgent.ts";
+import { MessageStatementsAgent } from "@/services/content/llm/agents/MessageStatementsAgent";
 import ReactMarkdown from "react-markdown";
 import { getMessageContent } from "@/components/content/Explorer/getMessageContent.ts";
+import { HumanMessage } from "@langchain/core/messages";
 
 export { MessageIcon };
 
@@ -64,11 +65,13 @@ export const Message: React.FC<{
 
             const agent = new MessageStatementsAgent();
             await agent.init();
-            const res = await agent.invoke(getMessageContent());
+            const response = await agent.invoke({
+              messages: [new HumanMessage(getMessageContent())],
+            });
 
-            nodesStore!.setMessageStatements(res.statemets);
-            setStatements(nodesStore!.getMessageStatements());
-            await nodesStore!.updateStorage();
+            nodesStore.setMessageStatements(response.statemets);
+            setStatements(nodesStore.getMessageStatements());
+            await nodesStore.updateStorage();
 
             setGenerationProcess("result");
           }}

@@ -2,7 +2,7 @@ import { Annotation, END, START, StateGraph } from "@langchain/langgraph/web";
 import { AIMessage, BaseMessage } from "@langchain/core/messages";
 import { LLMConfig, ModelProvider } from "@/services/content/llm/LLMConfig.ts";
 import { ToolName, tools } from "@/services/content/llm/tools.ts";
-import { Agent } from "@/services/content/llm/Agent.ts";
+import { Agent } from "@/services/content/llm/agents/Agent";
 
 const StateAnnotation = Annotation.Root({
   messages: Annotation<BaseMessage[]>({
@@ -82,11 +82,8 @@ export class MessageStatementsAgent extends Agent<
       .compile();
   };
 
-  invoke = (message: string) => {
-    return super.invoke(
-      "# Commit Message:\n\`\`\`\n" +
-        message +
-        "\n\`\`\`\n\n# Task\n\`\`\`\nExtract statements from the commit message and submit the extracted statements.\n\`\`\`",
-    );
-  };
+  getPrompt = (message: string) =>
+    "# Commit Message:\n\`\`\`\n" +
+    message +
+    "\n\`\`\`\n\n# Task\n\`\`\`\nExtract statements from the commit message and submit the extracted statements.\n\`\`\`";
 }

@@ -3,7 +3,7 @@ import { StructuredToolInterface } from "@langchain/core/tools";
 import { AIMessage, BaseMessage, ToolMessage } from "@langchain/core/messages";
 import { LLMConfig, ModelProvider } from "@/services/content/llm/LLMConfig.ts";
 import { ToolName } from "@/services/content/llm/tools.ts";
-import { Agent } from "@/services/content/llm/Agent.ts";
+import { Agent } from "@/services/content/llm/agents/Agent";
 
 const StateAnnotation = Annotation.Root({
   messages: Annotation<BaseMessage[]>({
@@ -40,7 +40,6 @@ export class NodeDescriptorAgent extends Agent<
       })
       .addEdge(START, "descriptor")
       .addNode("tools", this.ToolNode)
-      .addEdge("tools", "descriptor")
       .addNode("contentAnalyzer", (state) =>
         this.extractContentToolCalls(state, [ToolName.FetchCodeSurroundings]),
       )
@@ -55,13 +54,15 @@ export class NodeDescriptorAgent extends Agent<
 
         return "contentAnalyzer";
       })
+      .addEdge("tools", "descriptor")
       .addNode("respond", (state) => {
         const lastMessage = state.messages[
           state.messages.length - 1
         ] as AIMessage;
+        console.log(lastMessage.content);
+
         return { response: lastMessage.content as string };
       })
-      .addEdge("respond", END)
       .addConditionalEdges("contentAnalyzer", (state) => {
         const lastMessage = state.messages[state.messages.length - 1];
         if ((lastMessage as ToolMessage).tool_call_id) {
@@ -70,6 +71,7 @@ export class NodeDescriptorAgent extends Agent<
 
         return "respond";
       })
+      .addEdge("respond", END)
       .compile();
   };
 }

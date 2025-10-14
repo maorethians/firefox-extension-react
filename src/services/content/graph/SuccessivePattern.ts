@@ -8,7 +8,8 @@ import { NodesStore } from "@/services/content/NodesStore.ts";
 import { last } from "lodash";
 import { Hunk } from "@/services/content/graph/Hunk.ts";
 import { tools } from "@/services/content/llm/tools.ts";
-import { NodeDescriptorAgent } from "@/services/content/llm/NodeDescriptorAgent.ts";
+import { NodeDescriptorAgent } from "@/services/content/llm/agents/NodeDescriptorAgent";
+import { HumanMessage } from "@langchain/core/messages";
 
 export class SuccessivePattern extends BaseNode {
   declare node: SuccessivePatternJson;
@@ -88,7 +89,9 @@ export class SuccessivePattern extends BaseNode {
       fetchSurroundingsTool ? [fetchSurroundingsTool] : [],
     );
     await agent.init();
-    const response = await agent.invoke(prompt);
+    const response = await agent.invoke({
+      messages: [new HumanMessage(prompt)],
+    });
     await this.streamField("description", response, options?.parentsToSet);
 
     await this.entitle();
